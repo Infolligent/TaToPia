@@ -50,7 +50,7 @@ contract TaToPia {
         POTATO = IERC20(_potato);
     }
     
-    function createLand(uint256 _startTime, uint256[] memory _invested) public {
+    function createLand(uint256 _startTime) public { // , uint256[] memory _invested
         uint256 _target;
         // land 2 belum reinvest
         if (landLength == 0) {
