@@ -36,6 +36,15 @@ module.exports = {
   networks: {
     localhost: {
       url: "http://127.0.0.1:7545"
+    },
+    hardhat: {
+      accounts: {
+        count: 5000,
+        accountsBalance: "10000000000000000000000"
+      },
+      // forking: {
+      //   url: "https://bsc-dataseed.binance.org/"
+      // },
     }
   }
 };
