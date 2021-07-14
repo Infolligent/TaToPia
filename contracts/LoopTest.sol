@@ -27,7 +27,7 @@ contract LoopTest {
         flag = false;
         for (uint256 i=_start; i <= _stop; i++) {
             uint256 _tmp = map1[players[i]];
-            _tmp = _tmp * 130 / 100;
+            //_tmp = _tmp * 130 / 100;
             map2[players[i]] = _tmp;
 
             console.log(i);
@@ -37,7 +37,7 @@ contract LoopTest {
 
     function singleCall(uint256 _index) public {
         uint256 _tmp = map1[players[_index]];
-        _tmp = _tmp * 130 / 100;
+        //_tmp = _tmp * 130 / 100;
         map2[players[_index]] = _tmp;
     }
 }

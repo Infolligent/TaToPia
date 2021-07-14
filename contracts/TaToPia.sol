@@ -7,7 +7,7 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 contract TaToPia {
     
-    enum Phases { Seeding, Budding, Flowering, Harvest, Handling, Sales, End }
+    enum Phases { Seeding, Calculate, Budding, Flowering, Harvest, Handling, Sales, End }
     
     struct Player {
         address playerAddress;
@@ -24,13 +24,14 @@ contract TaToPia {
         uint256 target;
         uint256 funded;
         Phases phase;
-        mapping (address => uint256) invested;  // have to use list to track this
+        mapping (address => uint256) invested;
         mapping (address => bool) playerExist;
         address[] playersList;    
         mapping (address => uint256) playersIndex;
         mapping (address => bool) optedOut;
         mapping (address => bool) optOutWithdraw;
         address[] optOutList;
+        mapping (address => bool) reinvested;
     }
     
     uint256 public landLength;
@@ -50,9 +51,12 @@ contract TaToPia {
         POTATO = IERC20(_potato);
     }
     
-    function createLand(uint256 _startTime) public { // , uint256[] memory _invested
+    function createLand(uint256 _startTime) public {
+        // A1 seeding start time take in as argument
+        // A1 seeding end is 3 weeks 2100
+        // goes to next phase
+
         uint256 _target;
-        // land 2 belum reinvest
         if (landLength == 0) {
             _target = initialTotalSeeding;  
         } else {
@@ -68,16 +72,13 @@ contract TaToPia {
         _land.target = _target;
         _land.phase = Phases.Seeding;
         
-         // TODO: handle user's reinvestment when land >= 3
-         // Clash? Land creation and withdraw decision happening at the same time
-         
-        
         landLength++;
     }
     
     function proceedToNextPhase(uint256 _landNumber) public {
         Land storage _land = lands[_landNumber];
         
+        require(_land.phase != Phases.End, "This land is completed");
         uint256 _endTime = _land.phaseEndTime;
         
         if (_land.phase == Phases.Seeding) {
@@ -105,22 +106,25 @@ contract TaToPia {
         
     }
     
-    function invest(uint256 _landNumber, address _upline, uint256 _amount) public {
+    function invest(uint256 _landNumber, address _upline, uint256 _amount) external {
+        Land storage _land = lands[_landNumber];
         require(_landNumber < landLength, "Not a valid land number");
-        require(lands[_landNumber].phase == Phases.Seeding, "This land is not currently in seeding phase");
+        require(_land.phase == Phases.Seeding, "This land is not currently in seeding phase");
+        require(block.timestamp >= _land.phaseStartTime, "Land is not started yet");
+
+        // TODO: default upline?
         require(globalPlayerExist[_upline] || _upline == address(0), "Upline does not exist");
         
         // 0.1% of target
-        uint256 _pointOne = lands[_landNumber].target / 1000;
+        uint256 _pointOne = _land.target / 1000;
         uint256 _minInvest;
         if (_pointOne < 1000 ether) {
             _minInvest = _pointOne;
         } else {
             _minInvest = 1000 ether;
         }
-        uint256 _maxInvest = lands[_landNumber].target * 5 / 100;
-        
-        Land storage _land = lands[_landNumber];
+        uint256 _maxInvest = _land.target * 5 / 100;
+
         uint256 _invested = _land.invested[msg.sender];
         require(_invested + _amount <= _maxInvest, "Seeding amount exceeds maximum");
         require(_invested + _amount >= _minInvest, "Seeding amount is less than minimum");
@@ -157,19 +161,41 @@ contract TaToPia {
         _land.invested[msg.sender] += _amount;
         _land.funded += _amount;
     }
+
+    // reinvest
+    function reinvest(uint256 _landNumber, address _player) external {
+        // _landNumber is the CURRENT land number
+        // reinvestment will be bring forward to the new land
+        Land storage _land = lands[_landNumber];
+        require(_land.phase == Phases.Flowering, "It is not the flowering phase");
+        require(_land.playerExist[_player], "You are not in this land");
+        require(_land.optedOut[_player], "You have already opt out");
+        require(!_land.reinvested[_player], "You already reinvested");
+        require((landLength-_landNumber) >= 2, "New land is not created yet");
+
+        uint256 _investment = _land.invested[_player];
+        uint256 _newInvestment = _investment * 115 / 100;
+        Land storage _newLand = lands[_landNumber+2];
+        _newLand.playerExist[_player] = true;
+        _newLand.playersList.push(_player);
+        _newLand.playersIndex[_player] = _newLand.playersList.length;
+        _newLand.invested[_player] = _newInvestment;
+        _newLand.funded += _newInvestment;
+    }
     
     // witdraw decision
-    function optOut(uint256 _landNumber) public {
+    function optOut(uint256 _landNumber) external {
         Land storage _land = lands[_landNumber];
         require(_land.phase == Phases.Flowering, "It is not the flowering phase");
         require(_land.playerExist[msg.sender], "You are not in this land");
         require(!_land.optedOut[msg.sender], "You have already opt out");
+        require(!_land.reinvested[msg.sender], "You already reinvested");
         
         // add to opt out list
         _land.optedOut[msg.sender] = true;
         _land.optOutList.push(msg.sender);
         
-        // remove from playing list
+        // TODO: need to remove from players' list? Already have reinvest and opt out lists to keep track
         uint256 _index = _land.playersIndex[msg.sender];
         address _lastPlayer = _land.playersList[_land.playersList.length - 1];
         _land.playersList[_index] = _lastPlayer;
@@ -180,7 +206,7 @@ contract TaToPia {
     }
     
     // withdraw at the end of cycle
-    function withdraw(uint256 _landNumber) public {
+    function withdraw(uint256 _landNumber) external {
         Land storage _land = lands[_landNumber];
         require(_land.phase == Phases.Sales, "It is not the sales phase");
         require(_land.optedOut[msg.sender], "You are still in the game");

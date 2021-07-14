@@ -39,7 +39,7 @@ module.exports = {
     },
     hardhat: {
       accounts: {
-        count: 5000,
+        count: 501,
         accountsBalance: "10000000000000000000000"
       },
       // forking: {

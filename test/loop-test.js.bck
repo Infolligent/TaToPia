@@ -11,7 +11,7 @@ describe("TaToPia", function() {
         const signers = await ethers.getSigners();
         const loopTest = await waffle.deployContract(signers[0], LoopTest);
 
-        for (let i=0; i < 5000; i++) {
+        for (let i=0; i < 500; i++) {
             await loopTest.connect(signers[i]).store();
         }
 
@@ -22,7 +22,7 @@ describe("TaToPia", function() {
         const { loopTest, signers } = await waffle.loadFixture(fixture);
         
         console.log("haha");
-        await loopTest.bigLoop(0, 5000);
+        await loopTest.bigLoop(0, 500);
         const flag = await loopTest.flag();
         expect(flag);
     })

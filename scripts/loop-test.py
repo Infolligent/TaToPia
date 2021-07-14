@@ -45,10 +45,10 @@ def thread_fn(_start, _stop, name):
     print("[*] {} thread complete!".format(name))
 
 threads = []
-nums = np.linspace(0, 5000, 10, endpoint=False, dtype=int)
+nums = np.linspace(0, 500, 10, endpoint=False, dtype=int)
 tick = time.time()
 for idx, i in enumerate(nums):
-    x = threading.Thread(target=thread_fn, args=(i, i+500, idx))
+    x = threading.Thread(target=thread_fn, args=(i, i+50, idx))
     threads.append(x)
     x.start()
 
@@ -61,15 +61,13 @@ print("[*] Simulation took {} seconds".format(tock-tick))
 counter = contract.functions.counter().call()
 print("[*] Counter value: {}".format(counter))
 
-# print(" ")
-# print("[*] Average gas used for entering: {}".format(sum(store_gas)/len(store_gas)))
-# print("[*] Max gas used for entering: {}".format(max(store_gas)))
-# print("[*] Min gas used for entering: {}".format(min(store_gas)))
-# print(" ")
-
-print("[*] Running big loop for 0-20")
-receipt = transact(contract.functions.bigLoop(0, 20), 0)
+print("[*] Running single call...")
+receipt = transact(contract.functions.singleCall(0), 0)
 print(receipt)
+
+# print("[*] Running big loop for 0-20")
+# receipt = transact(contract.functions.bigLoop(0, 20), 0)
+# print(receipt)
 
 # print(" ")
 # print("[*] Running big loop for 1000-4999")
