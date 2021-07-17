@@ -16,9 +16,10 @@ contract TaToPia {
         uint256 downlineProfits;  // TODO: how is these calculated?
     }
     
-    // TODO: is the order of user in the list important?
     struct Land {
         uint256 landNumber;
+        uint256 seedStart;
+        uint256 seedEnd;
         uint256 phaseStartTime;
         uint256 phaseEndTime;
         uint256 target;
@@ -44,6 +45,7 @@ contract TaToPia {
     uint256 maxInt = 2**256 - 1;
     
     uint256 private initialTotalSeeding = 10000 ether;  // assumet Potato token is 18 decimals
+    uint256 contractBalance;
     
     IERC20 private POTATO;
     
@@ -52,23 +54,34 @@ contract TaToPia {
     }
     
     function createLand(uint256 _startTime) public {
-        // A1 seeding start time take in as argument
-        // A1 seeding end is 3 weeks 2100
-        // goes to next phase
+
+        if (landLength >= 3) {
+            require(lands[landLength-2].funded >= lands[landLength-2].target, "Land T-2 is not fully seeded yet");
+        }
 
         uint256 _target;
-        if (landLength == 0) {
-            _target = initialTotalSeeding;  
-        } else {
+        if {
             uint256 _previousTarget = lands[landLength-1].target;
             _target = _previousTarget / 100 * 130;
+        } else {
+            _target = initialTotalSeeding; 
         }
         
         // initialize a land, starts at seeding phase
         Land storage _land = lands[landLength];
         _land.landNumber = landLength;
         _land.phaseStartTime = _startTime;
-        _land.phaseEndTime = _startTime + 1 weeks - 1 hours;
+        _land.seedStart = _startTime;
+        if (landLength == 0) {
+            _land.phaseEndTime = _startTime + 2 weeks - 1 hours;
+            _land.seedEnd = _startTime + 2 weeks - 1 hours;
+        } else if (landLength%2 == 0) {
+            _land.phaseEndTime = lands[langLength-1].phaseEndTime + 3 days;
+            _land.seedEnd = lands[langLength-1].phaseEndTime + 3 days;
+        } else {
+            _land.phaseEndTime = lands[langLength-1].phaseEndTime + 4 days;
+            _land.seedEnd = lands[langLength-1].phaseEndTime + 4 days;
+        }
         _land.target = _target;
         _land.phase = Phases.Seeding;
         
@@ -128,10 +141,13 @@ contract TaToPia {
         uint256 _invested = _land.invested[msg.sender];
         require(_invested + _amount <= _maxInvest, "Seeding amount exceeds maximum");
         require(_invested + _amount >= _minInvest, "Seeding amount is less than minimum");
-        require(_land.funded + _amount <= _land.target, "Seeding amount exceeds land target");
         
         uint256 _allowance = POTATO.allowance(msg.sender, address(this));
         require(_allowance >= _amount, "Not enough token allowance");
+        if (_land.funded + _amount > _land.target) {
+            _amount = _land.target - _land.funded;
+        }
+
         POTATO.transferFrom(msg.sender, address(this), _amount);
         
         address[] memory _downlines;
@@ -160,6 +176,7 @@ contract TaToPia {
         
         _land.invested[msg.sender] += _amount;
         _land.funded += _amount;
+        contractBalance += _amount;
     }
 
     // reinvest
@@ -183,7 +200,7 @@ contract TaToPia {
         _newLand.funded += _newInvestment;
     }
     
-    // witdraw decision
+    // withdraw decision
     function optOut(uint256 _landNumber) external {
         Land storage _land = lands[_landNumber];
         require(_land.phase == Phases.Flowering, "It is not the flowering phase");
@@ -216,8 +233,9 @@ contract TaToPia {
         uint256 _withdrawable = _invested / 100 * 115;
         
         _land.optOutWithdraw[msg.sender] = true;
+        contractBalance -= _amount;
         
-        // TODO: need to make sure smart contract has enough balance?
+        // Don't need to check contract balance as it will have enough
         POTATO.transfer(msg.sender, _withdrawable);
     }
     
