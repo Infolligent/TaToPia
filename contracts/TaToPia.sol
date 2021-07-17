@@ -24,6 +24,7 @@ contract TaToPia {
         uint256 phaseEndTime;
         uint256 target;
         uint256 funded;
+        bool hit;
         Phases phase;
         mapping (address => uint256) invested;
         mapping (address => bool) playerExist;
@@ -44,7 +45,7 @@ contract TaToPia {
     
     uint256 maxInt = 2**256 - 1;
     
-    uint256 private initialTotalSeeding = 10000 ether;  // assumet Potato token is 18 decimals
+    uint256 private initialTotalSeeding = 10000 ether;  // assume Potato token is 18 decimals
     uint256 contractBalance;
     
     IERC20 private POTATO;
@@ -54,13 +55,14 @@ contract TaToPia {
     }
     
     function createLand(uint256 _startTime) public {
-
+        
+        // Land T-3 must be fully seeded before starting new land
         if (landLength >= 3) {
-            require(lands[landLength-2].funded >= lands[landLength-2].target, "Land T-2 is not fully seeded yet");
+            require(lands[landLength-3].funded >= lands[landLength-3].target, "Land T-3 is not fully seeded yet");
         }
 
         uint256 _target;
-        if {
+        if (landLength >= 2) {
             uint256 _previousTarget = lands[landLength-1].target;
             _target = _previousTarget / 100 * 130;
         } else {
@@ -76,11 +78,11 @@ contract TaToPia {
             _land.phaseEndTime = _startTime + 2 weeks - 1 hours;
             _land.seedEnd = _startTime + 2 weeks - 1 hours;
         } else if (landLength%2 == 0) {
-            _land.phaseEndTime = lands[langLength-1].phaseEndTime + 3 days;
-            _land.seedEnd = lands[langLength-1].phaseEndTime + 3 days;
+            _land.phaseEndTime = lands[landLength-1].phaseEndTime + 3 days;
+            _land.seedEnd = lands[landLength-1].phaseEndTime + 3 days;
         } else {
-            _land.phaseEndTime = lands[langLength-1].phaseEndTime + 4 days;
-            _land.seedEnd = lands[langLength-1].phaseEndTime + 4 days;
+            _land.phaseEndTime = lands[landLength-1].phaseEndTime + 4 days;
+            _land.seedEnd = lands[landLength-1].phaseEndTime + 4 days;
         }
         _land.target = _target;
         _land.phase = Phases.Seeding;
@@ -176,6 +178,9 @@ contract TaToPia {
         
         _land.invested[msg.sender] += _amount;
         _land.funded += _amount;
+        if (_land.funded == _land.target) {
+            _land.hit = true;
+        }
         contractBalance += _amount;
     }
 
@@ -233,16 +238,28 @@ contract TaToPia {
         uint256 _withdrawable = _invested / 100 * 115;
         
         _land.optOutWithdraw[msg.sender] = true;
-        contractBalance -= _amount;
+        contractBalance -= _withdrawable;
         
         // Don't need to check contract balance as it will have enough
         POTATO.transfer(msg.sender, _withdrawable);
     }
+
+    function getSeedFailWithdrawAmount(uint256 _landNumber) {
+        
+    }
     
-    // TODO: handle seeding fail
+    // handle seeding fail
+    function withdrawSeedFail(uint256 _landNumber) external {
+        Land storage _land = lands[_landNumber];
+        require(_landNumber < landLength, "Not a valid land number");
+        require(block.timestamp >= _land.seedEnd, "Seeding is not over yet");
+        require(!_land.hit, "Seeding is successful");
+
+
+    }
     
     function withdrawReferral() external {
-        
+        // TODO
     }
     
 }
