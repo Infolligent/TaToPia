@@ -24,6 +24,7 @@ contract TaToPia {
         uint256 phaseEndTime;
         uint256 target;
         uint256 funded;
+        uint256 reinvestment;   // reinvestment amount
         bool hit;
         Phases phase;
         mapping (address => uint256) invested;
@@ -72,7 +73,7 @@ contract TaToPia {
         // initialize a land, starts at seeding phase
         Land storage _land = lands[landLength];
         _land.landNumber = landLength;
-        _land.phaseStartTime = _startTime;
+        _land.phaseStartTime = _startTime;  // TODO: block.timestamp for landLength > 1?
         _land.seedStart = _startTime;
         if (landLength == 0) {
             _land.phaseEndTime = _startTime + 2 weeks - 1 hours;
@@ -96,6 +97,7 @@ contract TaToPia {
         require(_land.phase != Phases.End, "This land is completed");
         uint256 _endTime = _land.phaseEndTime;
         
+        // TODO: put the correct time
         if (_land.phase == Phases.Seeding) {
             require(block.timestamp >= _endTime + 1 hours, "Not the time yet");
             _land.phaseStartTime = _endTime + 1 hours;
@@ -197,12 +199,21 @@ contract TaToPia {
 
         uint256 _investment = _land.invested[_player];
         uint256 _newInvestment = _investment * 115 / 100;
-        Land storage _newLand = lands[_landNumber+2];
-        _newLand.playerExist[_player] = true;
-        _newLand.playersList.push(_player);
-        _newLand.playersIndex[_player] = _newLand.playersList.length;
-        _newLand.invested[_player] = _newInvestment;
-        _newLand.funded += _newInvestment;
+
+        for (uint256 i=_landNumber+2; i<landLength; i++) {
+            // still seeding
+            if (block.timestamp < lands[i].seedEnd && !lands[i].hit) {
+                Land storage _newLand = lands[i];
+                _newLand.playerExist[_player] = true;
+                _newLand.playersList.push(_player);
+                _newLand.playersIndex[_player] = _newLand.playersList.length;
+                _newLand.invested[_player] = _newInvestment;
+                _newLand.funded += _newInvestment;
+                _newLand.reinvestment += _newInvestment;
+                break;
+            }
+            // TODO: handle no land to reinvest
+        }    
     }
     
     // withdraw decision
@@ -244,8 +255,10 @@ contract TaToPia {
         POTATO.transfer(msg.sender, _withdrawable);
     }
 
-    function getSeedFailWithdrawAmount(uint256 _landNumber) {
-        
+    function getSeedFailWithdrawAmount(uint256 _landNumber) external {
+        // If land T seeding fail:
+        // 1. Land T new players get 100% refund
+        // 2. T-3 players get refunds proportion to the amount they invest
     }
     
     // handle seeding fail
