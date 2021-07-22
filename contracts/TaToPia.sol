@@ -24,17 +24,23 @@ contract TaToPia {
         uint256 phaseEndTime;
         uint256 target;
         uint256 funded;
-        uint256 reinvestment;   // reinvestment amount
         bool hit;
+        uint256 reinvestment;   // reinvestment amount
+        
         Phases phase;
+        
         mapping (address => uint256) invested;
         mapping (address => bool) playerExist;
         address[] playersList;    
+        
+        mapping (address => uint256) reinvested;
+        mapping (address => bool) reinvestorExist;
+        address[] reinvestorList;
+        
         mapping (address => uint256) playersIndex;
         mapping (address => bool) optedOut;
         mapping (address => bool) optOutWithdraw;
         address[] optOutList;
-        mapping (address => bool) reinvested;
     }
     
     uint256 public landLength;
@@ -255,10 +261,33 @@ contract TaToPia {
         POTATO.transfer(msg.sender, _withdrawable);
     }
 
-    function getSeedFailWithdrawAmount(uint256 _landNumber) external {
+    function getContractPTTBalance() public view returns(uint256) {
+        return POTATO.balanceOf(address(this));
+    }
+
+    function getSeedFailWithdrawAmount(uint256 _landNumber) public view {
         // If land T seeding fail:
         // 1. Land T new players get 100% refund
         // 2. T-3 players get refunds proportion to the amount they invest
+        Land storage _land = lands[_landNumber];
+        require(block.timestamp > _land.seedEnd, "Seeding has not end yet");
+        require(!_land.hit, "Seeding target is reached");
+
+        uint256 _contractBalance = getContractPTTBalance();
+        uint256 _refundProportion = _contractBalance - _land.funded;  // refundable amount for T-3 players
+        uint256 _T3Total = lands
+
+        uint256 _withdrawble = 0;
+        if (_land.playerExist[msg.sender]) {
+            _withdrawable = _land.invested[msg.sender];
+        } else {
+            // TODO: what happen if landNumber < 3?
+            for (uint256 i=_landNumber-1; i>=_landNumber-3; i--) {
+                if (lands[i].playerExist[msg.sender]) {
+
+                }
+            }
+        }
     }
     
     // handle seeding fail
