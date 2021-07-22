@@ -13,7 +13,7 @@ const hour = 3600;
 
 const addressZero = ethers.constants.AddressZero;
 
-describe("TaToPia", function() {
+describe("TaToPia Village", function() {
     async function fixture() {
         const signers = await ethers.getSigners();
         const potato = await waffle.deployContract(signers[0], Potato);

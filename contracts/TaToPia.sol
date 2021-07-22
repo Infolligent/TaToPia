@@ -25,7 +25,6 @@ contract TaToPia {
         uint256 target;
         uint256 funded;
         bool hit;
-        uint256 reinvestment;   // reinvestment amount
         
         Phases phase;
         
@@ -33,9 +32,10 @@ contract TaToPia {
         mapping (address => bool) playerExist;
         address[] playersList;    
         
-        mapping (address => uint256) reinvested;
-        mapping (address => bool) reinvestorExist;
-        address[] reinvestorList;
+        mapping (address => bool) isReinvestFromT_2;
+        mapping (address => bool) reinvested;
+        uint256 reinvestment;   // reinvestment amount
+        mapping (address => bool) seedFailRefunded;
         
         mapping (address => uint256) playersIndex;
         mapping (address => bool) optedOut;
@@ -52,7 +52,7 @@ contract TaToPia {
     
     uint256 maxInt = 2**256 - 1;
     
-    uint256 private initialTotalSeeding = 10000 ether;  // assume Potato token is 18 decimals
+    uint256 private InitialSeedTarget = 10000 ether;  // assume Potato token is 18 decimals
     uint256 contractBalance;
     
     IERC20 private POTATO;
@@ -64,8 +64,12 @@ contract TaToPia {
     function createLand(uint256 _startTime) public {
         
         // Land T-3 must be fully seeded before starting new land
-        if (landLength >= 3) {
+        if (landLength > 3) {
             require(lands[landLength-3].funded >= lands[landLength-3].target, "Land T-3 is not fully seeded yet");
+        }
+        // Previous land must be fully seeded
+        if (landLength > 0) {
+            require(lands[landLength-1].hit, "Previous land is not fully seeded yet");
         }
 
         uint256 _target;
@@ -73,7 +77,7 @@ contract TaToPia {
             uint256 _previousTarget = lands[landLength-1].target;
             _target = _previousTarget / 100 * 130;
         } else {
-            _target = initialTotalSeeding; 
+            _target = InitialSeedTarget; 
         }
         
         // initialize a land, starts at seeding phase
@@ -216,6 +220,10 @@ contract TaToPia {
                 _newLand.invested[_player] = _newInvestment;
                 _newLand.funded += _newInvestment;
                 _newLand.reinvestment += _newInvestment;
+
+                if (i == _landNumber+2) {
+                    _newLand.isReinvestFromT_2[msg.sender] = true;
+                }
                 break;
             }
             // TODO: handle no land to reinvest
@@ -265,42 +273,55 @@ contract TaToPia {
         return POTATO.balanceOf(address(this));
     }
 
-    function getSeedFailWithdrawAmount(uint256 _landNumber) public view {
+    function getSeedFailRefundAmount(address _player, uint256 _landNumber) public view returns (uint256) {
         // If land T seeding fail:
         // 1. Land T new players get 100% refund
         // 2. T-3 players get refunds proportion to the amount they invest
+        // (T-3) refund = invested / _T3Total * _refundProportion
+
         Land storage _land = lands[_landNumber];
         require(block.timestamp > _land.seedEnd, "Seeding has not end yet");
         require(!_land.hit, "Seeding target is reached");
 
         uint256 _contractBalance = getContractPTTBalance();
         uint256 _refundProportion = _contractBalance - _land.funded;  // refundable amount for T-3 players
-        uint256 _T3Total = lands
+        uint256 _T3Total = lands[_landNumber-1].funded + lands[_landNumber-2].funded + lands[_landNumber-3].funded;
 
-        uint256 _withdrawble = 0;
-        if (_land.playerExist[msg.sender]) {
-            _withdrawable = _land.invested[msg.sender];
-        } else {
-            // TODO: what happen if landNumber < 3?
+        uint256 _refund = 0;
+        if (_land.playerExist[_player]) {
+            _refund += _land.invested[_player];
+        } 
+        
+        if (landLength > 3) {
             for (uint256 i=_landNumber-1; i>=_landNumber-3; i--) {
-                if (lands[i].playerExist[msg.sender]) {
-
+                if (i == _landNumber-3) {
+                    if (lands[_landNumber].isReinvestFromT_2[_player]) {
+                        break;
+                    }
+                }
+                if (lands[i].playerExist[_player] || lands[i].optedOut[_player]) {
+                    _refund += lands[i].invested[_player] / _T3Total * _refundProportion;
                 }
             }
         }
+
+        return _refund;
     }
     
     // handle seeding fail
-    function withdrawSeedFail(uint256 _landNumber) external {
+    function refundSeedFail(uint256 _landNumber) external {
         Land storage _land = lands[_landNumber];
         require(_landNumber < landLength, "Not a valid land number");
         require(block.timestamp >= _land.seedEnd, "Seeding is not over yet");
         require(!_land.hit, "Seeding is successful");
+        require(!_land.seedFailRefunded[msg.sender], "You already withdraw your refund");
 
-
+        uint256 _refundable = getSeedFailRefundAmount(msg.sender, _landNumber);
+        _land.seedFailRefunded[msg.sender] = true;
+        POTATO.transfer(msg.sender, _refundable);
     }
     
-    function withdrawReferral() external {
+    function withdrawReferralProfit() external {
         // TODO
     }
     
