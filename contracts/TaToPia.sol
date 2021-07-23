@@ -4,8 +4,10 @@ pragma solidity 0.8.4;
 // docs: https://docs.google.com/document/d/1g6WP1H0lS1s48IJ-GeCGYRelvQ7BOt8EHeqVsHA0xHE/edit
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/access/Ownable.sol';
+import "hardhat/console.sol";
 
-contract TaToPia {
+contract TaToPia is Ownable {
     
     enum Phases { Seeding, Calculate, Budding, Flowering, Harvest, Sales }
     
@@ -59,6 +61,7 @@ contract TaToPia {
     
     constructor(address _potato) {
         POTATO = IERC20(_potato);
+        console.log(msg.sender);
     }
     
     function createLand(uint256 _startTime) public {
@@ -138,14 +141,14 @@ contract TaToPia {
         
     }
     
-    function invest(uint256 _landNumber, address _upline, uint256 _amount) external {
+    function invest(address _player, uint256 _landNumber, uint256 _amount) external onlyOwner {
         Land storage _land = lands[_landNumber];
         require(_landNumber < landLength, "Not a valid land number");
         require(_land.phase == Phases.Seeding, "This land is not currently in seeding phase");
         require(block.timestamp >= _land.phaseStartTime, "Land is not started yet");
 
         // TODO: default upline?
-        require(globalPlayerExist[_upline] || _upline == address(0), "Upline does not exist");
+        // require(globalPlayerExist[_upline] || _upline == address(0), "Upline does not exist");
         
         // 0.1% of target
         uint256 _pointOne = _land.target / 1000;
@@ -157,43 +160,43 @@ contract TaToPia {
         }
         uint256 _maxInvest = _land.target * 5 / 100;
 
-        uint256 _invested = _land.invested[msg.sender];
+        uint256 _invested = _land.invested[_player];
         require(_invested + _amount <= _maxInvest, "Seeding amount exceeds maximum");
         require(_invested + _amount >= _minInvest, "Seeding amount is less than minimum");
         
-        uint256 _allowance = POTATO.allowance(msg.sender, address(this));
+        uint256 _allowance = POTATO.allowance(_player, address(this));
         require(_allowance >= _amount, "Not enough token allowance");
         if (_land.funded + _amount > _land.target) {
             _amount = _land.target - _land.funded;
         }
 
-        POTATO.transferFrom(msg.sender, address(this), _amount);
+        POTATO.transferFrom(_player, address(this), _amount);
         
-        address[] memory _downlines;
-        if (!globalPlayerExist[msg.sender]) {
-            Player memory _player = Player({
-                playerAddress: msg.sender,
-                upline: _upline,
-                downlineProfits: 0,
-                downlines: _downlines
-            });
+        // address[] memory _downlines;
+        // if (!globalPlayerExist[_player]) {
+        //     Player memory _player = Player({
+        //         playerAddress: _player,
+        //         upline: _upline,
+        //         downlineProfits: 0,
+        //         downlines: _downlines
+        //     });
             
-            globalPlayersList.push(_player);
-            globalPlayerExist[msg.sender] = true;
-            players[msg.sender] = _player;
+        //     globalPlayersList.push(_player);
+        //     globalPlayerExist[_player = true;
+        //     players[_player] = _player;
             
-            if (_upline != address(0)) {
-                players[_upline].downlines.push(msg.sender);
-            }
+        //     if (_upline != address(0)) {
+        //         players[_upline].downlines.push(_player);
+        //     }
+        // }
+        
+        if (!_land.playerExist[_player]) {
+            _land.playerExist[_player] = true;
+            _land.playersList.push(_player);
+            _land.playersIndex[_player] = _land.playersList.length;
         }
         
-        if (!_land.playerExist[msg.sender]) {
-            _land.playerExist[msg.sender] = true;
-            _land.playersList.push(msg.sender);
-            _land.playersIndex[msg.sender] = _land.playersList.length;
-        }
-        
-        _land.invested[msg.sender] += _amount;
+        _land.invested[_player] += _amount;
         _land.funded += _amount;
         if (_land.funded == _land.target) {
             _land.hit = true;
@@ -202,7 +205,7 @@ contract TaToPia {
     }
 
     // reinvest
-    function reinvest(uint256 _landNumber, address _player) external {
+    function reinvest(address _player, uint256 _landNumber) external onlyOwner {
         // _landNumber is the CURRENT land number
         // reinvestment will be bring forward to the new land
         Land storage _land = lands[_landNumber];
@@ -227,7 +230,7 @@ contract TaToPia {
                 _newLand.reinvestment += _newInvestment;
 
                 if (i == _landNumber+2) {
-                    _newLand.isReinvestFromT_2[msg.sender] = true;
+                    _newLand.isReinvestFromT_2[_player] = true;
                 }
                 break;
             }
@@ -236,41 +239,41 @@ contract TaToPia {
     }
     
     // withdraw decision
-    function optOut(uint256 _landNumber) external {
+    function optOut(address _player, uint256 _landNumber) external {
         Land storage _land = lands[_landNumber];
         require(_land.phase == Phases.Flowering, "It is not the flowering phase");
-        require(_land.playerExist[msg.sender], "You are not in this land");
-        require(!_land.optedOut[msg.sender], "You have already opt out");
-        require(!_land.reinvested[msg.sender], "You already reinvested");
+        require(_land.playerExist[_player], "You are not in this land");
+        require(!_land.optedOut[_player], "You have already opt out");
+        require(!_land.reinvested[_player], "You already reinvested");
         
         // add to opt out list
-        _land.optedOut[msg.sender] = true;
-        _land.optOutList.push(msg.sender);
+        _land.optedOut[_player] = true;
+        _land.optOutList.push(_player);
         
-        uint256 _index = _land.playersIndex[msg.sender];
+        uint256 _index = _land.playersIndex[_player];
         address _lastPlayer = _land.playersList[_land.playersList.length - 1];
         _land.playersList[_index] = _lastPlayer;
-        _land.playersIndex[msg.sender] = maxInt;
+        _land.playersIndex[_player] = maxInt;
         _land.playersIndex[_lastPlayer] = _index;
-        _land.playerExist[msg.sender] = false;
+        _land.playerExist[_player] = false;
         _land.playersList.pop();
     }
     
     // withdraw at the end of cycle
-    function withdraw(uint256 _landNumber) external {
+    function optOutWithdraw(address _player, uint256 _landNumber) external {
         Land storage _land = lands[_landNumber];
         require(_land.phase == Phases.Sales, "It is not the sales phase");
-        require(_land.optedOut[msg.sender], "You are still in the game");
-        require(!_land.optOutWithdraw[msg.sender], "You have already withdraw");
+        require(_land.optedOut[_player], "You are still in the game");
+        require(!_land.optOutWithdraw[_player], "You have already withdraw");
         
-        uint256 _invested = _land.invested[msg.sender];
+        uint256 _invested = _land.invested[_player];
         uint256 _withdrawable = _invested / 100 * 115;
         
-        _land.optOutWithdraw[msg.sender] = true;
+        _land.optOutWithdraw[_player] = true;
         contractBalance -= _withdrawable;
         
         // Don't need to check contract balance as it will have enough
-        POTATO.transfer(msg.sender, _withdrawable);
+        POTATO.transfer(_player, _withdrawable);
     }
 
     function getContractPTTBalance() public view returns(uint256) {
@@ -313,16 +316,16 @@ contract TaToPia {
     }
     
     // handle seeding fail
-    function refundSeedFail(uint256 _landNumber) external {
+    function refundSeedFail(address _player, uint256 _landNumber) external {
         Land storage _land = lands[_landNumber];
         require(_landNumber < landLength, "Not a valid land number");
         require(block.timestamp >= _land.seedEnd, "Seeding is not over yet");
         require(!_land.hit, "Seeding is successful");
-        require(!_land.seedFailRefunded[msg.sender], "You already withdraw your refund");
+        require(!_land.seedFailRefunded[_player], "You already withdraw your refund");
 
-        uint256 _refundable = getSeedFailRefundAmount(msg.sender, _landNumber);
-        _land.seedFailRefunded[msg.sender] = true;
-        POTATO.transfer(msg.sender, _refundable);
+        uint256 _refundable = getSeedFailRefundAmount(_player, _landNumber);
+        _land.seedFailRefunded[_player] = true;
+        POTATO.transfer(_player, _refundable);
     }
 }
 

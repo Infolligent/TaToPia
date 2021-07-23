@@ -17,12 +17,13 @@ async function main() {
   const Potato = await hre.ethers.getContractFactory("Potato");
   const potato = await Potato.deploy();
   await potato.deployed();
-  const TaToPia = await hre.ethers.getContractFactory("TaToPia");
-  const tatopia = await TaToPia.deploy(potato.address);
+  const TaToPiaFactory = await hre.ethers.getContractFactory("TaToPiaFactory");
+  const tatopiaFactory = await TaToPiaFactory.deploy(potato.address);
 
-  await tatopia.deployed();
+  await tatopiaFactory.deployed();
+  await tatopiaFactory.createVillage();
 
-  console.log("TaToPia deployed to:", tatopia.address);
+  console.log("TaToPiaFactory deployed to:", tatopiaFactory.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
