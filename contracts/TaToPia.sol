@@ -7,13 +7,13 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 contract TaToPia {
     
-    enum Phases { Seeding, Calculate, Budding, Flowering, Harvest, Handling, Sales, End }
+    enum Phases { Seeding, Calculate, Budding, Flowering, Harvest, Sales }
     
     struct Player {
         address playerAddress;
         address upline;
         address[] downlines;
-        uint256 downlineProfits;  // TODO: how is these calculated?
+        uint256 downlineProfits;  // TODO: how are these calculated?
     }
     
     struct Land {
@@ -104,27 +104,32 @@ contract TaToPia {
     function proceedToNextPhase(uint256 _landNumber) public {
         Land storage _land = lands[_landNumber];
         
-        require(_land.phase != Phases.End, "This land is completed");
+        require(_land.phase != Phases.Sales, "This land is completed");
         uint256 _endTime = _land.phaseEndTime;
         
         // TODO: put the correct time
         if (_land.phase == Phases.Seeding) {
-            require(block.timestamp >= _endTime + 1 hours, "Not the time yet");
-            _land.phaseStartTime = _endTime + 1 hours;
-            _land.phaseEndTime = _land.phaseStartTime + 1 weeks;
+            // proceed to Calculate phase after seeding
+            require(block.timestamp >= _endTime, "Not the time yet");
+            _land.phaseStartTime = _endTime;
+            _land.phaseEndTime = _land.phaseStartTime + 1 hours;
+        } else if (_land.phase == Phases.Calculate) {
+            // proceed to Budding phase
+            require(block.timestamp >= _endTime, "Not the time yet");
+            _land.phaseStartTime = _endTime;
+            _land.phaseEndTime = _land.phaseStartTime + 2 days + 15 hours;
         } else if (_land.phase == Phases.Budding) {
+            // proceeds to flowering phase (decision making)
             require(block.timestamp >= _endTime, "Not the time yet");
             _land.phaseStartTime = _endTime;
-            _land.phaseEndTime = _land.phaseStartTime + 6 hours;
+            _land.phaseEndTime = _land.phaseStartTime + 8 hours;
         } else if (_land.phase == Phases.Flowering) {
+            // proceeds to harvesting
             require(block.timestamp >= _endTime, "Not the time yet");
             _land.phaseStartTime = _endTime;
-            _land.phaseEndTime = _land.phaseStartTime + 1 days;
+            _land.phaseEndTime = _land.phaseStartTime + 1 weeks;
         } else if (_land.phase == Phases.Harvest) {
-            require(block.timestamp >= _endTime, "Not the time yet");
-            _land.phaseStartTime = _endTime;
-            _land.phaseEndTime = _land.phaseStartTime + 1 weeks - 6 hours;
-        } else if (_land.phase == Phases.Handling) {
+            // proceeds to Sales
             require(block.timestamp >= _endTime, "Not the time yet");
             _land.phaseStartTime = _endTime;
             _land.phaseEndTime = maxInt;
@@ -242,7 +247,6 @@ contract TaToPia {
         _land.optedOut[msg.sender] = true;
         _land.optOutList.push(msg.sender);
         
-        // TODO: need to remove from players' list? Already have reinvest and opt out lists to keep track
         uint256 _index = _land.playersIndex[msg.sender];
         address _lastPlayer = _land.playersList[_land.playersList.length - 1];
         _land.playersList[_index] = _lastPlayer;
@@ -320,10 +324,5 @@ contract TaToPia {
         _land.seedFailRefunded[msg.sender] = true;
         POTATO.transfer(msg.sender, _refundable);
     }
-    
-    function withdrawReferralProfit() external {
-        // TODO
-    }
-    
 }
 
