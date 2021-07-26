@@ -2,15 +2,13 @@
 pragma solidity 0.8.4;
 
 import './TaToPia.sol';
-import '@openzeppelin/contracts/utils/Counters.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 contract TaToPiaFactory {
     TaToPia[] public villages;
     address public potatoAddress;
 
-    using Counters for Counters.Counter;
-    Counters.Counter private villageCounter;
+    uint256 public villageCounter = 0;
 
     IERC20 private POTATO;
 
@@ -20,10 +18,9 @@ contract TaToPiaFactory {
     }
 
     function createVillage() external {
-        uint256 _villageNumber = villageCounter.current();
-        TaToPia _village = new TaToPia(potatoAddress, _villageNumber);
+        TaToPia _village = new TaToPia(potatoAddress, villageCounter);
         villages.push(_village);
-        villageCounter.increment();
+        villageCounter += 1;
     }
 
     function getVillages() public view returns (TaToPia[] memory) {
@@ -43,7 +40,7 @@ contract TaToPiaFactory {
     function reinvest(uint256 _villageNumber, uint256 _landNumber) external {
         TaToPia _village = TaToPia(villages[_villageNumber]);
         (uint256 _investedLand, uint256 _amount) = _village.reinvest(msg.sender, _landNumber);
-        // TODO ^ can state changing functions return values?
+        // TODO ^ state changing functions macam cannot return values
     }
 
     function optOut(uint256 _villageNumber, uint256 _landNumber) external {
@@ -57,22 +54,24 @@ contract TaToPiaFactory {
     }
 
 
-    function refundSeedFail(uint256 _villageNumber, uint256 _landNumber) external {
+    function refundSeedFail(uint256 _villageNumber) external {
         TaToPia _village = TaToPia(villages[_villageNumber]);
-        _village.refundSeedFail(msg.sender, _landNumber);
+        _village.refundSeedFail(msg.sender);
     }
 
     function migrateSeedFail(uint256 _villageNumber) external {
-        bool _seedingStatus = villages[_villageNumber].getSeeedingStatus();
-        uint256 _amount = 
+        TaToPia _village = TaToPia(villages[_villageNumber]);
+        ( , bool _seedingStatus) = _village.getSeedingStatus();
         require(!_seedingStatus, "Seeding is successful");
-
-        uint256 flag = 0;
-        for (i == _villageNumber+1; i <= villageCounter; i++) {
-            bool _isAvailable = villages[i].isAvailableToMigrate();
+        uint256 _amount = _village.getSeedFailRefundAmount(msg.sender);
+        require(_amount > 0, "Your migratable amount is 0");
+        
+        // find new village and migrate
+        for (uint256 i = _villageNumber+1; i <= villageCounter; i++) {
+            bool _isAvailable = villages[i].isAvailableToMigrate(_amount);
             if (_isAvailable) {
-                TaToPia _village = TaToPia(villages[i]);
-                _village.migration(msg.sender, );
+                TaToPia _migrateVillage = TaToPia(villages[i]);
+                _migrateVillage.migration(msg.sender, _amount);
             }
         }
     }
