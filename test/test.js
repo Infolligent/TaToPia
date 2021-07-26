@@ -17,6 +17,7 @@ const addressZero = ethers.constants.AddressZero;
 describe("TaToPia", function() {
     async function fixture() {
         const signers = await ethers.getSigners();
+        // contract deployer is minted with POTATO tokens
         const potato = await waffle.deployContract(signers[0], Potato);
         const tatopiaFactory = await waffle.deployContract(signers[0], TaToPiaFactory, [potato.address]);
 
@@ -57,41 +58,74 @@ describe("TaToPia", function() {
         expect(land0.phaseEndTime).to.equal(now + 2 * week - hour);
         expect(land0.target).to.equal(parseEther("10000"));
         expect(await tatopia.landLength()).to.equal(1);
-
-        // create new land and check target
-        let time = now + week
-        await tatopiaFactory.createLand(0, time);
-        let land1 = await tatopia.lands(1);
-
-        const expected = parseEther("13000");
-        expect(land1.target).to.equal(expected);
     })
 
-    // it("Seeding", async () => {
-    //     const { tatopia, potato, signers } = await waffle.loadFixture(fixture);
-    //     let time = Math.floor(Date.now() / 1000) + hour;
-    //     await tatopia.createLand(time);
+    it("Seeding", async () => {
+        const { tatopiaFactory, potato, signers } = await waffle.loadFixture(fixture);
 
-    //     // canot invest before the start time (land will be created before the start time)
-    //     await expect(tatopia.connect(signers[1]).invest(0, addressZero, parseEther("5"))).to.be
-    //         .revertedWith("Land is not started yet");
+        await tatopiaFactory.createVillage();
+        let now = Math.floor(Date.now() / 1000) + hour;
+        await tatopiaFactory.createLand(0, now);
 
-    //     await network.provider.send("evm_increaseTime", [hour]);
-
-    //     // send PTT to other user
-    //     await potato.transfer(signers[1].address, parseEther("5000"));
-         
-    //     // cannot invest if not approved
-    //     await expect(tatopia.connect(signers[1]).invest(0, addressZero, parseEther("200"))).to.be
-    //         .revertedWith("Not enough token allowance");
+        // cannot invest if not approved
+        await expect(tatopiaFactory.invest(0, 0, parseEther("200"))).to.be
+            .revertedWith("Not enough token allowance");
         
-    //     await potato.connect(signers[1]).approve(tatopia.address, parseEther("5000"));
-    //     // cannot invest less than 1%
-    //     await expect(tatopia.connect(signers[1]).invest(0, addressZero, parseEther("5"))).to.be
-    //         .revertedWith("Seeding amount is less than minimum");
-    //     // cannot invest more than 5%
-    //     await expect(tatopia.connect(signers[1]).invest(0, addressZero, parseEther("501"))).to.be
-    //         .revertedWith("Seeding amount exceeds maximum");
-    // })
+        await potato.approve(tatopiaFactory.address, parseEther("5000"));
+
+        // cannot invest before the start time (land will be created before the start time)
+        await expect(tatopiaFactory.invest(0, 0, parseEther("5"))).to.be
+            .revertedWith("Land is not started yet");
+
+        // fast forward 1 hour
+        await network.provider.send("evm_increaseTime", [hour]);
+   
+        // cannot invest less than 1% of total seeding amount 10000
+        await expect(tatopiaFactory.invest(0, 0, parseEther("5"))).to.be
+            .revertedWith("Seeding amount is less than minimum");
+        // cannot invest more than 5%
+        await expect(tatopiaFactory.invest(0, addressZero, parseEther("501"))).to.be
+            .revertedWith("Seeding amount exceeds maximum");
+    })
+
+    it("Moving to Calculate phase and creating new lands", async() => {
+        const { tatopiaFactory, potato, signers } = await waffle.loadFixture(fixture);
+
+        await tatopiaFactory.createVillage();
+        let now = Math.floor(Date.now() / 1000);
+        await tatopiaFactory.createLand(0, now);
+
+        // send 500 tokens to 19 users first, 500 x 20 = 10000
+        // user invests
+        for (var i=1; i<20; i++) {
+            await potato.transfer(signers[i].address, parseEther("500"));
+            await potato.connect(signers[i]).approve(tatopiaFactory.address, parseEther("500"));
+            await tatopiaFactory.connect(signers[i]).invest(0, 0, parseEther("500"));
+        }
+
+        // try create new land before finish seeding
+        await expect(tatopiaFactory.createLand(0, now)).to.be
+            .revertedWith("Previous land has not hit seeding target");
+        
+        // last user invest
+        await potato.transfer(signers[21].address, parseEther("500"));
+        await potato.connect(signers[21]).approve(tatopiaFactory.address, parseEther("500"));
+        await tatopiaFactory.connect(signers[21]).invest(0, 0, parseEther("500"));
+
+        // moving to calculate phase before seed phase end
+        await expect(tatopiaFactory.proceedToNextPhase(0, 0)).to.be
+            .revertedWith("Not the time yet");
+        
+        // create new land
+        expect(await tatopiaFactory.createLand(0, now));
+        const village = await getVillage(tatopiaFactory, 0);
+        expect(await village.landLength()).to.be.equal(2);
+        expect((await village.lands(0)).hit).to.be.true;
+
+        // fast forward time and proceed to next phase
+        await network.provider.send("evm_increaseTime", [2*week - hour]);
+        await tatopiaFactory.proceedToNextPhase(0, 0);
+        expect((await village.lands(0)).phase).to.be.equal(1);
+    })
 
 });

@@ -72,7 +72,7 @@ contract TaToPia is Ownable {
     function createLand(uint256 _startTime) public {
         // Previous land must be fully seeded
         if (landLength > 0) {
-            require(lands[landLength-1].hit, "Previous land Seeding phase not done");
+            require(lands[landLength-1].hit, "Previous land has not hit seeding target");
         }
 
         // Land T-3 must finish calculating
@@ -92,24 +92,28 @@ contract TaToPia is Ownable {
         Land storage _land = lands[landLength];
         _land.landNumber = landLength;
 
-        // TODO put correct time
+        if ((landLength+1)%4 == 0) {
+            require(lands[landLength-3].hit, "T-3 land has not fully seeded");
+        }
+
         if (landLength == 0) {
             _land.phaseStartTime = _startTime;
             _land.seedStart = _startTime;
-        } else if ((landLength+1)%4 == 0) {
-            uint256 _starttime = lands[landLength-1].seedStart;
+        } else {
+            _land.phaseStartTime = block.timestamp;
+            _land.seedStart = block.timestamp;
         }
 
-
+        // TODO: 3 and 4 days may need to swap
         if (landLength == 0) {
             _land.phaseEndTime = _startTime + 2 weeks - 1 hours;
             _land.seedEnd = _startTime + 2 weeks - 1 hours;
         } else if (landLength%2 == 0) {
-            _land.phaseEndTime = lands[landLength-1].phaseEndTime + 3 days;
-            _land.seedEnd = lands[landLength-1].phaseEndTime + 3 days;
+            _land.phaseEndTime = lands[landLength-1].seedEnd + 3 days;
+            _land.seedEnd = lands[landLength-1].seedEnd + 3 days;
         } else {
-            _land.phaseEndTime = lands[landLength-1].phaseEndTime + 4 days;
-            _land.seedEnd = lands[landLength-1].phaseEndTime + 4 days;
+            _land.phaseEndTime = lands[landLength-1].seedEnd + 4 days;
+            _land.seedEnd = lands[landLength-1].seedEnd + 4 days;
         }
         _land.target = _target;
         _land.phase = Phases.Seeding;
@@ -143,9 +147,10 @@ contract TaToPia is Ownable {
             // proceeds to harvesting
             require(block.timestamp >= _endTime, "Not the time yet");
             _land.phaseStartTime = _endTime;
-            _land.phaseEndTime = _land.phaseStartTime + 1 weeks;
+            _land.phaseEndTime = _land.phaseStartTime + 4 days + 1 hours;
         } else if (_land.phase == Phases.Harvest) {
             // proceeds to Sales
+            // time is set to indefinite
             require(block.timestamp >= _endTime, "Not the time yet");
             _land.phaseStartTime = _endTime;
             _land.phaseEndTime = maxInt;
@@ -177,13 +182,9 @@ contract TaToPia is Ownable {
         require(_invested + _amount <= _maxInvest, "Seeding amount exceeds maximum");
         require(_invested + _amount >= _minInvest, "Seeding amount is less than minimum");
         
-        uint256 _allowance = POTATO.allowance(_player, address(this));
-        require(_allowance >= _amount, "Not enough token allowance");
         if (_land.funded + _amount > _land.target) {
             _amount = _land.target - _land.funded;
         }
-
-        POTATO.transferFrom(_player, address(this), _amount);
         
         // address[] memory _downlines;
         // if (!globalPlayerExist[_player]) {
@@ -315,8 +316,7 @@ contract TaToPia is Ownable {
         uint256 _withdrawable = _invested / 100 * 115;
         
         _land.optOutWithdraw[_player] = true;
-        
-        // Don't need to check contract balance as it will have enough
+
         POTATO.transfer(_player, _withdrawable);
     }
 

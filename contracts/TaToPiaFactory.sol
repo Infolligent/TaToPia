@@ -34,8 +34,18 @@ contract TaToPiaFactory {
 
     function invest(uint256 _villageNumber, uint256 _landNumber, uint256 _amount) external {
         TaToPia _village = TaToPia(villages[_villageNumber]);
+
+        uint256 _allowance = POTATO.allowance(msg.sender, address(this));
+        require(_allowance >= _amount, "Not enough token allowance");
+
+        POTATO.transferFrom(msg.sender, address(_village), _amount);
         _village.invest(msg.sender, _landNumber, _amount);
     }
+
+    function proceedToNextPhase(uint256 _villageNumber, uint256 _landNumber) external {
+        TaToPia _village = TaToPia(villages[_villageNumber]);
+        _village.proceedToNextPhase(_landNumber);
+    } 
 
     function reinvest(uint256 _villageNumber, uint256 _landNumber) external {
         TaToPia _village = TaToPia(villages[_villageNumber]);
