@@ -30,6 +30,7 @@ receipt = transact(w3.eth.contract(
                 bytecode=contract_json['bytecode']).constructor(), 0
             )
 contract_address = receipt['contractAddress']
+# contract object
 contract = w3.eth.contract(abi=contract_json["abi"], address=contract_address)
 print("[*] Contract deployed at {}".format(contract_address))
 

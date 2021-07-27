@@ -17,11 +17,12 @@ async function main() {
   const Potato = await hre.ethers.getContractFactory("Potato");
   const potato = await Potato.deploy();
   await potato.deployed();
+
   const TaToPiaFactory = await hre.ethers.getContractFactory("TaToPiaFactory");
   const tatopiaFactory = await TaToPiaFactory.deploy(potato.address);
 
-  await tatopiaFactory.deployed();
-  await tatopiaFactory.createVillage();
+  // await tatopiaFactory.deployed();
+  // await tatopiaFactory.createVillage();
 
   console.log("TaToPiaFactory deployed to:", tatopiaFactory.address);
 }

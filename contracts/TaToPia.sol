@@ -18,6 +18,8 @@ contract TaToPia is Ownable {
     }
     
     struct Land {
+        string name;  //todo
+
         uint256 landNumber;
         uint256 seedStart;
         uint256 seedEnd;

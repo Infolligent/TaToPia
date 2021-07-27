@@ -18,6 +18,7 @@ contract TaToPiaFactory {
     }
 
     function createVillage() external {
+        // TODO village name
         TaToPia _village = new TaToPia(potatoAddress, villageCounter);
         villages.push(_village);
         villageCounter += 1;
