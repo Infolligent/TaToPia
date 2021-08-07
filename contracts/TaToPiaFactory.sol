@@ -17,9 +17,8 @@ contract TaToPiaFactory {
         POTATO = IERC20(_potato);
     }
 
-    function createVillage() external {
-        // TODO village name
-        TaToPia _village = new TaToPia(potatoAddress, villageCounter);
+    function createVillage(string memory _villageName) external {
+        TaToPia _village = new TaToPia(potatoAddress, _villageName, villageCounter);
         villages.push(_village);
         villageCounter += 1;
     }
@@ -28,9 +27,9 @@ contract TaToPiaFactory {
         return villages;
     }
 
-    function createLand(uint256 _villageNumber, uint256 _startTime) external {
+    function createLand(uint256 _villageNumber, string memory _landName, uint256 _startTime) external {
         TaToPia _village = TaToPia(villages[_villageNumber]);
-        _village.createLand(_startTime);
+        _village.createLand(_startTime, _landName);
     }
 
     function invest(uint256 _villageNumber, uint256 _landNumber, uint256 _amount) external {
@@ -85,6 +84,21 @@ contract TaToPiaFactory {
                 _migrateVillage.migration(msg.sender, _amount);
             }
         }
+    }
+
+    /*************************************
+        View Functions 
+    *************************************/
+    function getPlayerInvestments(address _player) external view returns (uint256[][] memory) {
+        // returns the invested amount of player at each land of each village
+        uint256[][] memory _investments = new uint256[][](villageCounter);
+        for (uint256 i = 0; i < villageCounter; i++) {
+            TaToPia _village = TaToPia(villages[i]);
+            uint256[] memory _villageInvestment = _village.getInvestments(_player);
+            _investments[i] = _villageInvestment;
+        }
+
+        return _investments;
     }
 
     // TODO: referral

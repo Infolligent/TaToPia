@@ -128,3 +128,6 @@ $ npx hardhat test
 
 ```
 
+# TODO
+- [ ] Referral System
+- [ ] Check if globalPlayer is require in TaToPia.sol

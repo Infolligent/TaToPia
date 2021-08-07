@@ -34,7 +34,7 @@ describe("TaToPia", function() {
     it("Create village", async () => {
         const { tatopiaFactory, potato, signers } = await waffle.loadFixture(fixture);
 
-        await tatopiaFactory.createVillage();
+        await tatopiaFactory.createVillage("Alpha");
         const villages = await tatopiaFactory.getVillages();
         expect(villages.length).to.equal(1);
 
@@ -45,11 +45,11 @@ describe("TaToPia", function() {
     it("Create land", async () => {
         const { tatopiaFactory, potato, signers } = await waffle.loadFixture(fixture);
 
-        await tatopiaFactory.createVillage();
+        await tatopiaFactory.createVillage("Alpha1");
 
         let now = Math.floor(Date.now() / 1000);
 
-        await tatopiaFactory.createLand(0, now);
+        await tatopiaFactory.createLand(0, "Alpha 1", now);
         let tatopia = await getVillage(tatopiaFactory, 0);
         let land0 = await tatopia.lands(0);
 
@@ -57,15 +57,15 @@ describe("TaToPia", function() {
         expect(land0.seedStart).to.equal(now);
         expect(land0.phaseEndTime).to.equal(now + 2 * week - hour);
         expect(land0.target).to.equal(parseEther("10000"));
-        expect(await tatopia.landLength()).to.equal(1);
+        expect(await tatopia.landCounter()).to.equal(1);
     })
 
     it("Seeding", async () => {
         const { tatopiaFactory, potato, signers } = await waffle.loadFixture(fixture);
 
-        await tatopiaFactory.createVillage();
+        await tatopiaFactory.createVillage("Alpha");
         let now = Math.floor(Date.now() / 1000) + hour;
-        await tatopiaFactory.createLand(0, now);
+        await tatopiaFactory.createLand(0, "Alpha 1", now);
 
         // cannot invest if not approved
         await expect(tatopiaFactory.invest(0, 0, parseEther("200"))).to.be
@@ -84,16 +84,20 @@ describe("TaToPia", function() {
         await expect(tatopiaFactory.invest(0, 0, parseEther("5"))).to.be
             .revertedWith("Seeding amount is less than minimum");
         // cannot invest more than 5%
-        await expect(tatopiaFactory.invest(0, addressZero, parseEther("501"))).to.be
+        await expect(tatopiaFactory.invest(0, 0, parseEther("501"))).to.be
             .revertedWith("Seeding amount exceeds maximum");
+
+        await tatopiaFactory.invest(0, 0, parseEther("100"));
+        let invested = (await tatopiaFactory.getPlayerInvestments(signers[0].address))[0][0];
+        expect(invested).to.be.equal(parseEther("100"));
     })
 
     it("Moving to Calculate phase and creating new lands", async() => {
         const { tatopiaFactory, potato, signers } = await waffle.loadFixture(fixture);
 
-        await tatopiaFactory.createVillage();
+        await tatopiaFactory.createVillage("Alpha");
         let now = Math.floor(Date.now() / 1000);
-        await tatopiaFactory.createLand(0, now);
+        await tatopiaFactory.createLand(0, "Alpha 1", now);
 
         // send 500 tokens to 19 users first, 500 x 20 = 10000
         // user invests
@@ -104,7 +108,7 @@ describe("TaToPia", function() {
         }
 
         // try create new land before finish seeding
-        await expect(tatopiaFactory.createLand(0, now)).to.be
+        await expect(tatopiaFactory.createLand(0, "Alpha 2", now)).to.be
             .revertedWith("Previous land has not hit seeding target");
         
         // last user invest
@@ -117,9 +121,9 @@ describe("TaToPia", function() {
             .revertedWith("Not the time yet");
         
         // create new land
-        expect(await tatopiaFactory.createLand(0, now));
+        expect(await tatopiaFactory.createLand(0, "Alpha 2", now));
         const village = await getVillage(tatopiaFactory, 0);
-        expect(await village.landLength()).to.be.equal(2);
+        expect(await village.landCounter()).to.be.equal(2);
         expect((await village.lands(0)).hit).to.be.true;
 
         // fast forward time and proceed to next phase
