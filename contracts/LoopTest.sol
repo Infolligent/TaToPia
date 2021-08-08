@@ -12,6 +12,8 @@ contract LoopTest {
     uint256 public counter;
     bool public flag;
 
+    uint256 public number;
+
     constructor () {
         counter = 0;
     }
@@ -39,5 +41,18 @@ contract LoopTest {
         uint256 _tmp = map1[players[_index]];
         //_tmp = _tmp * 130 / 100;
         map2[players[_index]] = _tmp;
+    }
+
+    function noGasLoop(uint256 _n) public view returns(uint256) {
+        for (uint256 i=0; i < 5000; i++) {
+            _n += 1;
+        }
+
+        return _n;
+    }
+
+    function stateChange(uint256 _n) public {
+        uint256 _tmp = noGasLoop(_n);
+        number = _tmp;
     }
 }

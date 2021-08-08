@@ -5,6 +5,15 @@ import './TaToPia.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 contract TaToPiaFactory {
+    struct Player {
+        address upline;
+        address[] downlines;
+        uint256 downlineInvestment;
+    }
+
+    mapping(address => Player) players;
+    address[] public playerList;
+
     TaToPia[] public villages;
     address public potatoAddress;
 
@@ -87,6 +96,44 @@ contract TaToPiaFactory {
     }
 
     /*************************************
+        Referral system 
+    *************************************/
+    // function isCircularReference(address upline, address downline) internal view returns(bool) {
+    //     return players[upline].referrer == downline;
+    // }
+
+    // function addReferrer(address _player) internal returns(bool){
+    //     // if (referrer == address(0)) {
+    //     // emit RegisteredRefererFailed(msg.sender, referrer, "Referrer cannot be 0x0 address");
+    //     // return false;
+    //     // } else if (isCircularReference(referrer, msg.sender)) {
+    //     // emit RegisteredRefererFailed(msg.sender, referrer, "Referee cannot be one of referrer uplines");
+    //     // return false;
+    //     // } else if (accounts[msg.sender].referrer != address(0)) {
+    //     // emit RegisteredRefererFailed(msg.sender, referrer, "Address have been registered upline");
+    //     // return false;
+    //     // }
+
+    //     Player storage userAccount = accounts[_player];
+    //     Player storage parentAccount = accounts[referrer];
+
+    //     userAccount.referrer = referrer;
+    //     parentAccount.referredCount = parentAccount.referredCount.add(1);
+
+    //     // emit RegisteredReferer(msg.sender, referrer);
+    //     return true;
+    // }
+
+    function calculateBonus(address _player, uint256 value) external view returns (uint256) {
+        Player storage _user = players[_player];
+
+        uint256 _totalBonus = 0;
+        if (_user.downlineInvestment > 3000 ether) {
+            // unlock first gen
+        } 
+    }
+
+    /*************************************
         View Functions 
     *************************************/
     function getPlayerInvestments(address _player) external view returns (uint256[][] memory) {
@@ -100,6 +147,4 @@ contract TaToPiaFactory {
 
         return _investments;
     }
-
-    // TODO: referral
 }
