@@ -21,6 +21,9 @@ describe("TaToPia", function() {
         const potato = await waffle.deployContract(signers[0], Potato);
         const tatopiaFactory = await waffle.deployContract(signers[0], TaToPiaFactory, [potato.address]);
 
+        for (var i=1; i<=30; i++) {
+            await potato.transfer(signers[i].address, parseEther("5000"));
+        }
         return { tatopiaFactory, potato, signers };
     }
 
@@ -68,28 +71,31 @@ describe("TaToPia", function() {
         await tatopiaFactory.createLand(0, "Alpha 1", now);
 
         // cannot invest if not approved
-        await expect(tatopiaFactory.invest(0, 0, parseEther("200"))).to.be
+        await expect(tatopiaFactory.invest(addressZero, 0, 0, parseEther("200"))).to.be
             .revertedWith("Not enough token allowance");
         
         await potato.approve(tatopiaFactory.address, parseEther("5000"));
 
         // cannot invest before the start time (land will be created before the start time)
-        await expect(tatopiaFactory.invest(0, 0, parseEther("5"))).to.be
+        await expect(tatopiaFactory.invest(addressZero, 0, 0, parseEther("5"))).to.be
             .revertedWith("Land is not started yet");
 
         // fast forward 1 hour
         await network.provider.send("evm_increaseTime", [hour]);
    
         // cannot invest less than 1% of total seeding amount 10000
-        await expect(tatopiaFactory.invest(0, 0, parseEther("5"))).to.be
+        await expect(tatopiaFactory.invest(addressZero, 0, 0, parseEther("5"))).to.be
             .revertedWith("Seeding amount is less than minimum");
         // cannot invest more than 5%
-        await expect(tatopiaFactory.invest(0, 0, parseEther("501"))).to.be
+        await expect(tatopiaFactory.invest(addressZero, 0, 0, parseEther("501"))).to.be
             .revertedWith("Seeding amount exceeds maximum");
 
-        await tatopiaFactory.invest(0, 0, parseEther("100"));
+        await tatopiaFactory.invest(addressZero, 0, 0, parseEther("100"));
         let invested = (await tatopiaFactory.getPlayerInvestments(signers[0].address))[0][0];
         expect(invested).to.be.equal(parseEther("100"));
+
+        let upline = await tatopiaFactory.getUpline(signers[0].address);
+        expect(upline).to.be.equal(addressZero);
     })
 
     it("Moving to Calculate phase and creating new lands", async() => {
@@ -102,9 +108,9 @@ describe("TaToPia", function() {
         // send 500 tokens to 19 users first, 500 x 20 = 10000
         // user invests
         for (var i=1; i<20; i++) {
-            await potato.transfer(signers[i].address, parseEther("500"));
+            //await potato.transfer(signers[i].address, parseEther("500"));
             await potato.connect(signers[i]).approve(tatopiaFactory.address, parseEther("500"));
-            await tatopiaFactory.connect(signers[i]).invest(0, 0, parseEther("500"));
+            await tatopiaFactory.connect(signers[i]).invest(addressZero, 0, 0, parseEther("500"));
         }
 
         // try create new land before finish seeding
@@ -112,9 +118,9 @@ describe("TaToPia", function() {
             .revertedWith("Previous land has not hit seeding target");
         
         // last user invest
-        await potato.transfer(signers[21].address, parseEther("500"));
+        //await potato.transfer(signers[21].address, parseEther("500"));
         await potato.connect(signers[21]).approve(tatopiaFactory.address, parseEther("500"));
-        await tatopiaFactory.connect(signers[21]).invest(0, 0, parseEther("500"));
+        await tatopiaFactory.connect(signers[21]).invest(addressZero, 0, 0, parseEther("500"));
 
         // moving to calculate phase before seed phase end
         await expect(tatopiaFactory.proceedToNextPhase(0, 0)).to.be
@@ -130,6 +136,49 @@ describe("TaToPia", function() {
         await network.provider.send("evm_increaseTime", [2*week - hour]);
         await tatopiaFactory.proceedToNextPhase(0, 0);
         expect((await village.lands(0)).phase).to.be.equal(1);
+    })
+
+    it("Reinvest", async() => {
+        const { tatopiaFactory, potato, signers } = await waffle.loadFixture(fixture);
+
+        // Land 1
+        await tatopiaFactory.createVillage("Alpha");
+        let village = await getVillage(tatopiaFactory, 0);
+        let now = Math.floor(Date.now() / 1000);
+        await tatopiaFactory.createLand(0, "Alpha 1", now);
+
+        for (var i=1; i<=20; i++) {
+            await potato.connect(signers[i]).approve(tatopiaFactory.address, parseEther("500"));
+            await tatopiaFactory.connect(signers[i]).invest(addressZero, 0, 0, parseEther("500"));
+        }
+
+        // Land 2
+        await network.provider.send("evm_increaseTime", [2*week - hour]);
+        await tatopiaFactory.proceedToNextPhase(0, 0);
+        await tatopiaFactory.createLand(0, "Alpha 2", now);
+        for (var i=1; i<=20; i++) {
+            await potato.connect(signers[i]).approve(tatopiaFactory.address, parseEther("650"));
+            await tatopiaFactory.connect(signers[i]).invest(addressZero, 0, 1, parseEther("650"));
+        }
+
+        // Land 3
+        await network.provider.send("evm_increaseTime", [hour]);
+        await tatopiaFactory.proceedToNextPhase(0, 0);
+        let phase = (await village.lands(0)).phase;
+        expect(phase).to.be.equal(2);
+        await tatopiaFactory.createLand(0, "Alpha 3", now);
+        for (var i=1; i<=20; i++) {
+            await potato.connect(signers[i]).approve(tatopiaFactory.address, parseEther("845"));
+            await tatopiaFactory.connect(signers[i]).invest(addressZero, 0, 2, parseEther("845"));
+        }
+
+        // Land 4
+        await network.provider.send("evm_increaseTime", [2*day + 15*hour]);
+        await tatopiaFactory.proceedToNextPhase(0, 0);
+        await tatopiaFactory.createLand(0, "Alpha 4", now);
+
+        // reinvest!
+        await tatopiaFactory.connect(signers[1]).reinvest(0, 0);
     })
 
 });
