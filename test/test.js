@@ -138,7 +138,7 @@ describe("TaToPia", function() {
         expect((await village.lands(0)).phase).to.be.equal(1);
     })
 
-    it("Reinvest", async() => {
+    it("Reinvest & Referral", async() => {
         const { tatopiaFactory, potato, signers } = await waffle.loadFixture(fixture);
 
         // Land 1
@@ -149,7 +149,7 @@ describe("TaToPia", function() {
 
         for (var i=1; i<=20; i++) {
             await potato.connect(signers[i]).approve(tatopiaFactory.address, parseEther("500"));
-            await tatopiaFactory.connect(signers[i]).invest(addressZero, 0, 0, parseEther("500"));
+            await tatopiaFactory.connect(signers[i]).invest(signers[0].address, 0, 0, parseEther("500"));
         }
 
         // Land 2
@@ -158,7 +158,7 @@ describe("TaToPia", function() {
         await tatopiaFactory.createLand(0, "Alpha 2", now);
         for (var i=1; i<=20; i++) {
             await potato.connect(signers[i]).approve(tatopiaFactory.address, parseEther("650"));
-            await tatopiaFactory.connect(signers[i]).invest(addressZero, 0, 1, parseEther("650"));
+            await tatopiaFactory.connect(signers[i]).invest(signers[0].address, 0, 1, parseEther("650"));
         }
 
         // Land 3
@@ -169,7 +169,7 @@ describe("TaToPia", function() {
         await tatopiaFactory.createLand(0, "Alpha 3", now);
         for (var i=1; i<=20; i++) {
             await potato.connect(signers[i]).approve(tatopiaFactory.address, parseEther("845"));
-            await tatopiaFactory.connect(signers[i]).invest(addressZero, 0, 2, parseEther("845"));
+            await tatopiaFactory.connect(signers[i]).invest(signers[0].address, 0, 2, parseEther("845"));
         }
 
         // Land 4
@@ -177,8 +177,16 @@ describe("TaToPia", function() {
         await tatopiaFactory.proceedToNextPhase(0, 0);
         await tatopiaFactory.createLand(0, "Alpha 4", now);
 
+        // simple referral test
+        // let directDownlineInvestment = (await tatopiaFactory.players(signers[0].address)).directDownlinesInvestment;
+        // console.log(directDownlineInvestment.toString());
+        let withdrawable = await tatopiaFactory.getWithdrawableBonus(signers[0].address);
+        expect(withdrawable).to.be.equal(parseEther("738"));
+
         // reinvest!
         await tatopiaFactory.connect(signers[1]).reinvest(0, 0);
+        let reinvestment = (await village.getInvestments(signers[1].address))[3];
+        expect(reinvestment).to.be.equal(parseEther("575"));   
     })
 
 });

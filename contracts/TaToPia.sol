@@ -14,7 +14,6 @@ contract TaToPia is Ownable {
         address playerAddress;
         address upline;
         address[] downlines;
-        uint256 downlineProfits;  // TODO: how are these calculated?
     }
     
     struct Land {
@@ -85,7 +84,7 @@ contract TaToPia is Ownable {
         }
 
         uint256 _target;
-        if (landCounter >= 2) {
+        if (landCounter >= 1) {
             uint256 _previousTarget = lands[landCounter-1].target;
             _target = _previousTarget / 100 * 130;
         } else {
@@ -191,24 +190,6 @@ contract TaToPia is Ownable {
             _amount = _land.target - _land.funded;
         }
         
-        // address[] memory _downlines;
-        // if (!globalPlayerExist[_player]) {
-        //     Player memory _player = Player({
-        //         playerAddress: _player,
-        //         upline: _upline,
-        //         downlineProfits: 0,
-        //         downlines: _downlines
-        //     });
-            
-        //     globalPlayersList.push(_player);
-        //     globalPlayerExist[_player = true;
-        //     players[_player] = _player;
-            
-        //     if (_upline != address(0)) {
-        //         players[_upline].downlines.push(_player);
-        //     }
-        // }
-        
         if (!_land.playerExist[_player]) {
             _land.playerExist[_player] = true;
             _land.playersList.push(_player);
@@ -229,7 +210,7 @@ contract TaToPia is Ownable {
         Land storage _land = lands[_landNumber];
         require(_land.phase == Phases.Flowering, "It is not the flowering phase");
         require(_land.playerExist[_player], "You are not in this land");
-        require(_land.optedOut[_player], "You have already opt out");
+        require(!_land.optedOut[_player], "You have already opt out");
         require(!_land.isReinvest[_player], "You already reinvested");
         require((landCounter-_landNumber) >= 2, "New land is not created yet");
 
