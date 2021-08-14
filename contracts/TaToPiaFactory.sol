@@ -144,17 +144,22 @@ contract TaToPiaFactory {
                 break;
             }
 
-            Player storage uplineAccount = players[_upline];
-
-            if (i == 0) {
-                uplineAccount.directDownlinesInvestment += _amount;
-            }
+            Player storage _uplineAccount = players[_upline];
 
             // add bonus if unlocked
-            uint256 bonus_unlock = BONUS_UNLOCK[i] * (10 ** potatoDecimal);
-            if (uplineAccount.directDownlinesInvestment >= bonus_unlock) {
-                uplineAccount.withdrawableBonus += _amount * REFERRAL_BONUS[i] / 1000;
-            }
+            uint256 _bonusUnlock = BONUS_UNLOCK[i] * (10 ** potatoDecimal);
+            uint256 _directDownlineInv = _uplineAccount.directDownlinesInvestment;
+            if (_directDownlineInv <= _bonusUnlock) {
+                if (i == 0) {
+                    if (_directDownlineInv + _amount > _bonusUnlock) {
+                        uint256 _balanceBonus = _directDownlineInv + _amount - _bonusUnlock;
+                        _uplineAccount.withdrawableBonus += _balanceBonus * REFERRAL_BONUS[i] / 1000;
+                    }
+                    _uplineAccount.directDownlinesInvestment += _amount;
+                }
+            } else {
+                _uplineAccount.withdrawableBonus += _amount * REFERRAL_BONUS[i] / 1000;
+            }      
 
             _downline = _upline;
         }

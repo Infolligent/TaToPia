@@ -178,8 +178,6 @@ describe("TaToPia", function() {
         await tatopiaFactory.createLand(0, "Alpha 4", now);
 
         // simple referral test
-        // let directDownlineInvestment = (await tatopiaFactory.players(signers[0].address)).directDownlinesInvestment;
-        // console.log(directDownlineInvestment.toString());
         let withdrawable = await tatopiaFactory.getWithdrawableBonus(signers[0].address);
         expect(withdrawable).to.be.equal(parseEther("738"));
 
