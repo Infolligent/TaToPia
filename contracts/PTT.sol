@@ -60,58 +60,7 @@ contract PTT is ERC20Permit, Ownable {
         _mint(initialAccount, initialBalance);
     }
 
-    /**
-     * @dev Moves `amount` of tokens from `sender` to `recipient`.
-     *
-     * This internal function is equivalent to {transfer}, and can be used to
-     * e.g. implement automatic token fees, slashing mechanisms, etc.
-     *
-     * Emits a {Transfer} event.
-     *
-     * Requirements:
-     *
-     * - `sender` cannot be the zero address.
-     * - `recipient` cannot be the zero address.
-     * - `sender` must have a balance of at least `amount`.
-     */
-    function _transfer(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) internal override {
-        require(sender != address(0), "ERC20: transfer from the zero address");
-        require(recipient != address(0), "ERC20: transfer to the zero address");
-        require(this.balanceOf(sender) >= amount, "ERC20: transfer amount exceeds balance");
 
-        uint256 taxRate = 0;
-
-        if (sender == _swapAddress) {
-            if (_buyRewardTaxRate > 0) {
-                super._transfer(sender, _rewardAddress, (amount * _buyRewardTaxRate) / _decimals);
-                taxRate += _buyRewardTaxRate;
-            }
-
-            if (_buyBurnTaxRate > 0) {
-                super._transfer(sender, _burnAddress, (amount * _buyBurnTaxRate) / _decimals);
-                taxRate += _buyBurnTaxRate;
-            }
-        } else {
-            if (_sellRewardTaxRate > 0) {
-                // Apply buy tax - 2% reward
-                super._transfer(sender, _rewardAddress, (amount * _sellRewardTaxRate) / _decimals);
-                taxRate += _sellRewardTaxRate;
-            }
-
-            if (_sellBurnTaxRate > 0) {
-                // Apply buy tax - 2% reward
-                super._transfer(sender, _burnAddress, (amount * _sellBurnTaxRate) / _decimals);
-                taxRate += _sellBurnTaxRate;
-            }
-        }
-
-        // Send remaining amount
-        super._transfer(sender, recipient, amount * (1 - taxRate));
-    }
 
     /**
      * @dev Sets the values for {buyRewardTaxRate}
@@ -167,5 +116,58 @@ contract PTT is ERC20Permit, Ownable {
      */
     function sellBurnTaxRate() public view returns (uint256) {
         return _sellBurnTaxRate;
+    }
+
+        /**
+     * @dev Moves `amount` of tokens from `sender` to `recipient`.
+     *
+     * This internal function is equivalent to {transfer}, and can be used to
+     * e.g. implement automatic token fees, slashing mechanisms, etc.
+     *
+     * Emits a {Transfer} event.
+     *
+     * Requirements:
+     *
+     * - `sender` cannot be the zero address.
+     * - `recipient` cannot be the zero address.
+     * - `sender` must have a balance of at least `amount`.
+     */
+    function _transfer(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) internal override {
+        require(sender != address(0), "ERC20: transfer from the zero address");
+        require(recipient != address(0), "ERC20: transfer to the zero address");
+        require(this.balanceOf(sender) >= amount, "ERC20: transfer amount exceeds balance");
+
+        uint256 taxRate = 0;
+
+        if (sender == _swapAddress) {
+            if (_buyRewardTaxRate > 0) {
+                super._transfer(sender, _rewardAddress, (amount * _buyRewardTaxRate) / _decimals);
+                taxRate += _buyRewardTaxRate;
+            }
+
+            if (_buyBurnTaxRate > 0) {
+                super._transfer(sender, _burnAddress, (amount * _buyBurnTaxRate) / _decimals);
+                taxRate += _buyBurnTaxRate;
+            }
+        } else {
+            if (_sellRewardTaxRate > 0) {
+                // Apply buy tax - 2% reward
+                super._transfer(sender, _rewardAddress, (amount * _sellRewardTaxRate) / _decimals);
+                taxRate += _sellRewardTaxRate;
+            }
+
+            if (_sellBurnTaxRate > 0) {
+                // Apply buy tax - 2% reward
+                super._transfer(sender, _burnAddress, (amount * _sellBurnTaxRate) / _decimals);
+                taxRate += _sellBurnTaxRate;
+            }
+        }
+
+        // Send remaining amount
+        super._transfer(sender, recipient, amount * (1 - taxRate));
     }
 }
