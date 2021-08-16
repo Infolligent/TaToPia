@@ -1,5 +1,30 @@
 {
   "name": "hardhat-project",
+  "description": "Tatopia smart contract",
+  "version": "1.0.0",
+  "files": [
+    "/contracts/**/*.sol",
+    "/build/contracts/*.json",
+    "!/contracts/mocks/**/*"
+  ],
+  "scripts": {
+    "compile": "hardhat compile",
+    "coverage": "env COVERAGE=true hardhat coverage",
+    "lint": "npm run lint:js && npm run lint:sol",
+    "lint:fix": "npm run lint:js:fix && npm run lint:sol:fix",
+    "lint:js": "eslint --ignore-path .gitignore .",
+    "lint:js:fix": "eslint --ignore-path .gitignore . --fix",
+    "lint:sol": "solhint 'contracts/**/*.sol' && prettier -c 'contracts/**/*.sol'",
+    "lint:sol:fix": "prettier --write \"contracts/**/*.sol\"",
+    "prepublish": "rimraf build contracts/build artifacts cache",
+    "prepare": "env COMPILE_MODE=production npm run compile",
+    "prepack": "scripts/prepack.sh",
+    "release": "scripts/release/release.sh",
+    "solhint": "./node_modules/.bin/solhint -f table contracts/**/*.sol",
+    "test": "hardhat test",
+    "test:inheritance": "node scripts/inheritanceOrdering artifacts/build-info/*",
+    "gas-report": "env ENABLE_GAS_REPORT=true npm run test"
+  },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-ganache": "^2.0.0",
@@ -9,6 +34,9 @@
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.4.1",
     "hardhat": "^2.4.1",
-    "hardhat-gas-reporter": "^1.0.4"
+    "hardhat-gas-reporter": "^1.0.4",
+    "prettier": "^2.3.2",
+    "prettier-plugin-solidity": "^1.0.0-beta.17",
+    "solhint": "^3.3.6"
   }
 }
