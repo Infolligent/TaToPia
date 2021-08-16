@@ -5,6 +5,6 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract Potato is ERC20 {
     constructor() ERC20("Potato", "PTT") {
-        _mint(msg.sender, 500000000000 * 10 ** decimals());
+        _mint(msg.sender, 500000000000 * 10**decimals());
     }
 }

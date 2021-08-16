@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
-import './TaToPia.sol';
-import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import "./TaToPia.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract TaToPiaFactory {
     struct Player {
@@ -22,10 +22,23 @@ contract TaToPiaFactory {
     uint256 public villageCounter = 0;
 
     ERC20 private POTATO;
-    uint256[] private REFERRAL_BONUS = [20, 20,20, 10, 10, 10, 5, 5, 5, 5, 5, 5];
-    uint256[] private BONUS_UNLOCK = [3000, 4500, 7000, 10000, 15000, 25000, 40000, 60000, 90000, 135000, 200000, 300000];
+    uint256[] private REFERRAL_BONUS = [20, 20, 20, 10, 10, 10, 5, 5, 5, 5, 5, 5];
+    uint256[] private BONUS_UNLOCK = [
+        3000,
+        4500,
+        7000,
+        10000,
+        15000,
+        25000,
+        40000,
+        60000,
+        90000,
+        135000,
+        200000,
+        300000
+    ];
 
-    constructor (address _potato) {
+    constructor(address _potato) {
         potatoAddress = _potato;
         POTATO = ERC20(_potato);
         potatoDecimal = POTATO.decimals();
@@ -41,12 +54,21 @@ contract TaToPiaFactory {
         return villages;
     }
 
-    function createLand(uint256 _villageNumber, string memory _landName, uint256 _startTime) external {
+    function createLand(
+        uint256 _villageNumber,
+        string memory _landName,
+        uint256 _startTime
+    ) external {
         TaToPia _village = TaToPia(villages[_villageNumber]);
         _village.createLand(_startTime, _landName);
     }
 
-    function invest(address _upline, uint256 _villageNumber, uint256 _landNumber, uint256 _amount) external {
+    function invest(
+        address _upline,
+        uint256 _villageNumber,
+        uint256 _landNumber,
+        uint256 _amount
+    ) external {
         TaToPia _village = TaToPia(villages[_villageNumber]);
 
         uint256 _allowance = POTATO.allowance(msg.sender, address(this));
@@ -62,7 +84,7 @@ contract TaToPiaFactory {
     function proceedToNextPhase(uint256 _villageNumber, uint256 _landNumber) external {
         TaToPia _village = TaToPia(villages[_villageNumber]);
         _village.proceedToNextPhase(_landNumber);
-    } 
+    }
 
     function reinvest(uint256 _villageNumber, uint256 _landNumber) external {
         TaToPia _village = TaToPia(villages[_villageNumber]);
@@ -80,7 +102,6 @@ contract TaToPiaFactory {
         _village.optOutWithdraw(msg.sender, _landNumber);
     }
 
-
     function refundSeedFail(uint256 _villageNumber) external {
         TaToPia _village = TaToPia(villages[_villageNumber]);
         _village.refundSeedFail(msg.sender);
@@ -88,13 +109,13 @@ contract TaToPiaFactory {
 
     function migrateSeedFail(uint256 _villageNumber) external {
         TaToPia _village = TaToPia(villages[_villageNumber]);
-        ( , bool _seedingStatus) = _village.getSeedingStatus();
+        (, bool _seedingStatus) = _village.getSeedingStatus();
         require(!_seedingStatus, "Seeding is successful");
         uint256 _amount = _village.getSeedFailRefundAmount(msg.sender);
         require(_amount > 0, "Your migratable amount is 0");
-        
+
         // find new village and migrate
-        for (uint256 i = _villageNumber+1; i <= villageCounter; i++) {
+        for (uint256 i = _villageNumber + 1; i <= villageCounter; i++) {
             bool _isAvailable = villages[i].isAvailableToMigrate(_amount);
             if (_isAvailable) {
                 TaToPia _migrateVillage = TaToPia(villages[i]);
@@ -106,11 +127,11 @@ contract TaToPiaFactory {
     /*************************************
         Referral system 
     *************************************/
-    function isCircularReference(address upline, address downline) internal view returns(bool) {
+    function isCircularReference(address upline, address downline) internal view returns (bool) {
         return players[upline].upline == downline;
     }
 
-    function addReferrer(address _player, address _upline) internal returns(bool){
+    function addReferrer(address _player, address _upline) internal returns (bool) {
         if (_upline == address(0)) {
             //emit RegisteredRefererFailed(msg.sender, referrer, "Referrer cannot be 0x0 address");
             //return false;
@@ -136,7 +157,7 @@ contract TaToPiaFactory {
         address _downline = _player;
         address _upline;
 
-        for (uint i = 0; i < 12; i++) {
+        for (uint256 i = 0; i < 12; i++) {
             _upline = players[_downline].upline;
 
             // TODO break if default upline is reached
@@ -147,19 +168,19 @@ contract TaToPiaFactory {
             Player storage _uplineAccount = players[_upline];
 
             // add bonus if unlocked
-            uint256 _bonusUnlock = BONUS_UNLOCK[i] * (10 ** potatoDecimal);
+            uint256 _bonusUnlock = BONUS_UNLOCK[i] * (10**potatoDecimal);
             uint256 _directDownlineInv = _uplineAccount.directDownlinesInvestment;
             if (_directDownlineInv <= _bonusUnlock) {
                 if (i == 0) {
                     if (_directDownlineInv + _amount > _bonusUnlock) {
                         uint256 _balanceBonus = _directDownlineInv + _amount - _bonusUnlock;
-                        _uplineAccount.withdrawableBonus += _balanceBonus * REFERRAL_BONUS[i] / 1000;
+                        _uplineAccount.withdrawableBonus += (_balanceBonus * REFERRAL_BONUS[i]) / 1000;
                     }
                     _uplineAccount.directDownlinesInvestment += _amount;
                 }
             } else {
-                _uplineAccount.withdrawableBonus += _amount * REFERRAL_BONUS[i] / 1000;
-            }      
+                _uplineAccount.withdrawableBonus += (_amount * REFERRAL_BONUS[i]) / 1000;
+            }
 
             _downline = _upline;
         }
@@ -180,11 +201,11 @@ contract TaToPiaFactory {
         return _investments;
     }
 
-    function getUpline(address _player) external view returns(address) {
+    function getUpline(address _player) external view returns (address) {
         return players[_player].upline;
     }
 
-    function getWithdrawableBonus(address _player) external view returns(uint256) {
+    function getWithdrawableBonus(address _player) external view returns (uint256) {
         return players[_player].withdrawableBonus;
     }
 }

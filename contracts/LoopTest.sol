@@ -4,8 +4,8 @@ pragma solidity 0.8.4;
 import "hardhat/console.sol";
 
 contract LoopTest {
-    mapping (address => uint256) map1;
-    mapping (address => uint256) map2;
+    mapping(address => uint256) map1;
+    mapping(address => uint256) map2;
 
     address[] public players;
 
@@ -14,7 +14,7 @@ contract LoopTest {
 
     uint256 public number;
 
-    constructor () {
+    constructor() {
         counter = 0;
     }
 
@@ -27,7 +27,7 @@ contract LoopTest {
 
     function bigLoop(uint256 _start, uint256 _stop) public {
         flag = false;
-        for (uint256 i=_start; i <= _stop; i++) {
+        for (uint256 i = _start; i <= _stop; i++) {
             uint256 _tmp = map1[players[i]];
             //_tmp = _tmp * 130 / 100;
             map2[players[i]] = _tmp;
@@ -43,8 +43,8 @@ contract LoopTest {
         map2[players[_index]] = _tmp;
     }
 
-    function noGasLoop(uint256 _n) public view returns(uint256) {
-        for (uint256 i=0; i < 5000; i++) {
+    function noGasLoop(uint256 _n) public view returns (uint256) {
+        for (uint256 i = 0; i < 5000; i++) {
             _n += 1;
         }
 
