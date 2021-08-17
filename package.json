@@ -37,6 +37,11 @@
     "hardhat-gas-reporter": "^1.0.4",
     "prettier": "^2.3.2",
     "prettier-plugin-solidity": "^1.0.0-beta.17",
-    "solhint": "^3.3.6"
+    "solhint": "^3.3.6",
+    "@truffle/hdwallet-provider": "^1.2.6",
+    "truffle-plugin-verify": "^0.5.7"
+  },
+  "dependencies": {
+    "truffle": "^5.4.6"
   }
 }

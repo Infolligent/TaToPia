@@ -1,3 +1,9 @@
 {
-    "solidity.compileUsingRemoteVersion": "v0.8.4+commit.c7e474f2"
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "solidity.formatter": "prettier", // This is the default so it might be missing.
+    "[solidity]": {
+      "editor.defaultFormatter": "JuanBlanco.solidity"
+    },
+    "solidity.compileUsingRemoteVersion": "latest"
 }

@@ -1,4 +1,9 @@
+bin/contracts
+build/contracts
+
 node_modules
+
+.env.json
 
 #Hardhat files
 cache

@@ -18,12 +18,19 @@
  *
  */
 
-const HDWalletProvider = require('@truffle/hdwallet-provider');
+const HDWalletProvider = require("@truffle/hdwallet-provider");
 // const infuraKey = "fj4jll3k.....";
 //
 // const fs = require('fs');
 // const mnemonic = fs.readFileSync(".secret").toString().trim();
-const { mnemonic, BSCScanAPI, ropstennet, rinkebynet,  etherscanAPI } = require('./.env.json');
+const {
+  privateKey,
+  mnemonic,
+  BSCScanAPI,
+  ropstennet,
+  rinkebynet,
+  etherscanAPI,
+} = require("./.env.json");
 
 module.exports = {
   /**
@@ -44,25 +51,30 @@ module.exports = {
     // options below to some value.
     //
     development: {
-      host: "127.0.0.1",     // Localhost (default: none)
-      port: 8545,            // Standard Ethereum port (default: none)
-      network_id: "*",       // Any network (default: none)
+      host: "127.0.0.1", // Localhost (default: none)
+      port: 8545, // Standard Ethereum port (default: none)
+      network_id: "*", // Any network (default: none)
       gas: 8500000,
     },
     bscTest: {
-      provider: () => new HDWalletProvider(mnemonic, `https://data-seed-prebsc-1-s1.binance.org:8545/`),
+      provider: () =>
+        new HDWalletProvider(
+          privateKey,
+          `https://data-seed-prebsc-1-s1.binance.org:8545/`
+        ),
       network_id: 97,
       gas: 8500000,
       confirmations: 2,
       timeoutBlocks: 200,
-      skipDryRun: true
+      skipDryRun: true,
     },
     BSC: {
-      provider: () => new HDWalletProvider(mnemonic, `https://bsc-dataseed1.binance.org`),
+      provider: () =>
+        new HDWalletProvider(privateKey, `https://bsc-dataseed1.binance.org`),
       network_id: 56,
       confirmations: 10,
       timeoutBlocks: 200,
-      skipDryRun: true
+      skipDryRun: true,
     },
     // Another network with more advanced options...
     // advanced: {
@@ -76,22 +88,22 @@ module.exports = {
     // Useful for deploying to a public network.
     // NB: It's important to wrap the provider as a function.
     ropsten: {
-      provider: () => new HDWalletProvider(mnemonic, ropstennet),
-      network_id: 3,       // Ropsten's id
-      gas: 8000000,        // Ropsten has a lower block limit than mainnet
+      provider: () => new HDWalletProvider(privateKey, ropstennet),
+      network_id: 3, // Ropsten's id
+      gas: 8000000, // Ropsten has a lower block limit than mainnet
       gasPrice: 30000000000,
-      confirmations: 2,    // # of confs to wait between deployments. (default: 0)
-      timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
-      skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )
+      confirmations: 2, // # of confs to wait between deployments. (default: 0)
+      timeoutBlocks: 200, // # of blocks before a deployment times out  (minimum/default: 50)
+      skipDryRun: true, // Skip dry run before migrations? (default: false for public nets )
     },
     rinkeby: {
-      provider: () => new HDWalletProvider(mnemonic, rinkebynet),
-      network_id: 4,       // Ropsten's id
-      gas: 8000000,        // Ropsten has a lower block limit than mainnet
+      provider: () => new HDWalletProvider(privateKey, rinkebynet),
+      network_id: 4, // Ropsten's id
+      gas: 8000000, // Ropsten has a lower block limit than mainnet
       gasPrice: 30000000000,
-      confirmations: 2,    // # of confs to wait between deployments. (default: 0)
-      timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
-      skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )
+      confirmations: 2, // # of confs to wait between deployments. (default: 0)
+      timeoutBlocks: 200, // # of blocks before a deployment times out  (minimum/default: 50)
+      skipDryRun: true, // Skip dry run before migrations? (default: false for public nets )
     },
     // Useful for private networks
     // private: {
@@ -106,27 +118,26 @@ module.exports = {
     // timeout: 100000
   },
 
-  plugins: [
-    'truffle-plugin-verify'
-  ],
+  plugins: ["truffle-plugin-verify"],
 
   api_keys: {
     etherscan: etherscanAPI,
-    bscscan: BSCScanAPI
+    bscscan: BSCScanAPI,
   },
 
   // Configure your compilers
   compilers: {
     solc: {
-      version: "0.6.12",    // Fetch exact version from solc-bin (default: truffle's version)
+      version: "0.8.4", // Fetch exact version from solc-bin (default: truffle's version)
       // docker: true,        // Use "0.5.1" you've installed locally with docker (default: false)
-      settings: {          // See the solidity docs for advice about optimization and evmVersion
+      settings: {
+        // See the solidity docs for advice about optimization and evmVersion
         optimizer: {
           enabled: true,
-          runs: 200
-       },
-       //evmVersion: "byzantium"
-      }
-    }
-  }
+          runs: 200,
+        },
+        //evmVersion: "byzantium"
+      },
+    },
+  },
 };

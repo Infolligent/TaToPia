@@ -60,8 +60,6 @@ contract PTT is ERC20Permit, Ownable {
         _mint(initialAccount, initialBalance);
     }
 
-
-
     /**
      * @dev Sets the values for {buyRewardTaxRate}
      */
@@ -118,7 +116,7 @@ contract PTT is ERC20Permit, Ownable {
         return _sellBurnTaxRate;
     }
 
-        /**
+    /**
      * @dev Moves `amount` of tokens from `sender` to `recipient`.
      *
      * This internal function is equivalent to {transfer}, and can be used to
