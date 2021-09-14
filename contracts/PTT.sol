@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.2;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
@@ -31,7 +31,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract PTT is ERC20Permit, Ownable {
+contract PTT is ERC20, ERC20Permit, Ownable {
     address private _swapAddress;
     address private _rewardAddress;
     address private _burnAddress;
@@ -41,6 +41,12 @@ contract PTT is ERC20Permit, Ownable {
     uint256 private _buyBurnTaxRate = 0;
     uint256 private _sellRewardTaxRate = 20; // 2%
     uint256 private _sellBurnTaxRate = 10; // 1%
+    uint256 private _maxTxnAmount;
+
+    mapping(address => bool) _exemptFeesFrom;
+    mapping(address => bool) _exemptFeesTo;
+
+    event TransferWithTax(address from, address to, uint256 amount, uint256 tax);
 
     /**
      * @dev Sets the values for {name}, {symbol}, {initialAccount}, and {initialBalance}.
@@ -55,9 +61,50 @@ contract PTT is ERC20Permit, Ownable {
         string memory name,
         string memory symbol,
         address initialAccount,
-        uint256 initialBalance
+        uint256 initialBalance,
+        address rewardAddress_,
+        address burnAddress_
     ) payable ERC20(name, symbol) ERC20Permit(name) {
+        _rewardAddress = rewardAddress_;
+        _burnAddress = burnAddress_;
+
+        _exemptFeesFrom[initialAccount] = true;
+        _exemptFeesFrom[_rewardAddress] = true;
+        _exemptFeesFrom[_burnAddress] = true;
+        _exemptFeesTo[initialAccount] = true;
+        _exemptFeesTo[_rewardAddress] = true;
+        _exemptFeesTo[_burnAddress] = true;
+
+        _maxTxnAmount = initialBalance / 100;
         _mint(initialAccount, initialBalance);
+    }
+
+    /**
+     * @dev Sets the swap address TODO: make it a list instead?
+     */
+    function setSwapAddress(address swapAddress_) public onlyOwner {
+        _swapAddress = swapAddress_;
+    }
+
+    /**
+     * @dev Sets the reward address
+     */
+    function setRewardAddress(address rewardAddress_) public onlyOwner {
+        _rewardAddress = rewardAddress_;
+    }
+
+    /**
+     * @dev Sets the burn address
+     */
+    function setBurnAddress(address burnAddress_) public onlyOwner {
+        _burnAddress = burnAddress_;
+    }
+
+    /**
+     * @dev Sets the max transaction percentage.
+     */
+    function setMaxTxnAmount(uint256 maxTxnAmount_) public onlyOwner() {
+        _maxTxnAmount = maxTxnAmount_;
     }
 
     /**
@@ -89,6 +136,41 @@ contract PTT is ERC20Permit, Ownable {
     }
 
     /**
+     * @dev Set fees exemption for transaction from {addr} to be {boolean}
+     */
+    function setExemptFeesFrom(address addr, bool boolean) public onlyOwner {
+        _exemptFeesFrom[addr] = boolean;
+    }
+
+    /**
+     * @dev Set fees exemption for transaction to {addr} to be {boolean}
+     */
+    function setExemptFeesTo(address addr, bool boolean) public onlyOwner {
+        _exemptFeesTo[addr] = boolean;
+    }
+
+    /**
+     * @dev Returns the swap address.
+     */
+    function swapAddress() public view returns (address) {
+        return _swapAddress;
+    }
+
+    /**
+     * @dev Returns the reward address.
+     */
+    function rewardAddress() public view returns (address) {
+        return _rewardAddress;
+    }
+
+    /**
+     * @dev Returns the burn address.
+     */
+    function burnAddress() public view returns (address) {
+        return _burnAddress;
+    }
+
+    /**
      * @dev Returns the reward tax rate when buying the token.
      */
     function buyRewardTaxRate() public view returns (uint256) {
@@ -117,6 +199,20 @@ contract PTT is ERC20Permit, Ownable {
     }
 
     /**
+     * @dev Returns true transactions from {addr} is exempted from fees
+     */
+    function isExemptFeesFrom(address addr) public view returns (bool) {
+        return _exemptFeesFrom[addr];
+    }
+
+    /**
+     * @dev Returns true if transactions to {addr} is exempted from fees
+     */
+    function isExemptFeesTo(address addr) public view returns (bool) {
+        return _exemptFeesTo[addr];
+    }
+
+    /**
      * @dev Moves `amount` of tokens from `sender` to `recipient`.
      *
      * This internal function is equivalent to {transfer}, and can be used to
@@ -138,34 +234,43 @@ contract PTT is ERC20Permit, Ownable {
         require(sender != address(0), "ERC20: transfer from the zero address");
         require(recipient != address(0), "ERC20: transfer to the zero address");
         require(this.balanceOf(sender) >= amount, "ERC20: transfer amount exceeds balance");
+        if(sender != owner() && recipient != owner() && sender != address(this))
+            require(amount <= _maxTxnAmount, "Transfer amount exceeds the maxTxAmount.");
 
-        uint256 taxRate = 0;
+        uint256 tax = 0;
 
         if (sender == _swapAddress) {
-            if (_buyRewardTaxRate > 0) {
-                super._transfer(sender, _rewardAddress, (amount * _buyRewardTaxRate) / _decimals);
-                taxRate += _buyRewardTaxRate;
-            }
+            if (!isExemptFeesTo(recipient)) {
+                if (_buyRewardTaxRate > 0) {
+                    uint256 rewardTax = (amount * _buyRewardTaxRate) / _decimals;
+                    tax += rewardTax;
+                    super._transfer(sender, _rewardAddress, rewardTax);
+                }
 
-            if (_buyBurnTaxRate > 0) {
-                super._transfer(sender, _burnAddress, (amount * _buyBurnTaxRate) / _decimals);
-                taxRate += _buyBurnTaxRate;
+                if (_buyBurnTaxRate > 0) {
+                    uint256 burnTax = (amount * _buyBurnTaxRate) / _decimals;
+                    tax += burnTax;
+                    super._transfer(sender, _burnAddress, burnTax);
+                }
             }
         } else {
-            if (_sellRewardTaxRate > 0) {
-                // Apply buy tax - 2% reward
-                super._transfer(sender, _rewardAddress, (amount * _sellRewardTaxRate) / _decimals);
-                taxRate += _sellRewardTaxRate;
-            }
+            if (!isExemptFeesFrom(sender) && !isExemptFeesTo(recipient)) {
+                if (_sellRewardTaxRate > 0) {
+                    uint256 rewardTax = (amount * _sellRewardTaxRate) / _decimals;
+                    tax += rewardTax;
+                    super._transfer(sender, _rewardAddress, rewardTax);
+                }
 
-            if (_sellBurnTaxRate > 0) {
-                // Apply buy tax - 2% reward
-                super._transfer(sender, _burnAddress, (amount * _sellBurnTaxRate) / _decimals);
-                taxRate += _sellBurnTaxRate;
+                if (_sellBurnTaxRate > 0) {
+                    uint256 burnTax = (amount * _sellBurnTaxRate) / _decimals;
+                    tax += burnTax;
+                    super._transfer(sender, _burnAddress, burnTax);
+                }
             }
         }
 
         // Send remaining amount
-        super._transfer(sender, recipient, amount * (1 - taxRate));
+        super._transfer(sender, recipient, amount - tax);
+        emit TransferWithTax(sender, recipient, amount, tax);
     }
 }
