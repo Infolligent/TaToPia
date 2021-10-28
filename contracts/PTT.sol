@@ -80,7 +80,7 @@ contract PTT is ERC20, ERC20Permit, Ownable {
     }
 
     /**
-     * @dev Sets the swap address TODO: make it a list instead?
+     * @dev Sets the swap address
      */
     function setSwapAddress(address swapAddress_) public onlyOwner {
         _swapAddress = swapAddress_;
@@ -154,6 +154,10 @@ contract PTT is ERC20, ERC20Permit, Ownable {
      */
     function swapAddress() public view returns (address) {
         return _swapAddress;
+    }
+
+    function maxTxnAmount() public view returns (uint256) {
+        return _maxTxnAmount;
     }
 
     /**
@@ -235,7 +239,7 @@ contract PTT is ERC20, ERC20Permit, Ownable {
         require(recipient != address(0), "ERC20: transfer to the zero address");
         require(this.balanceOf(sender) >= amount, "ERC20: transfer amount exceeds balance");
         if(sender != owner() && recipient != owner() && sender != address(this))
-            require(amount <= _maxTxnAmount, "Transfer amount exceeds the maxTxAmount.");
+            require(amount <= _maxTxnAmount, "Transfer amount exceeds the maxTxnAmount.");
 
         uint256 tax = 0;
 
