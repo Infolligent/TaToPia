@@ -45,6 +45,9 @@ class Web3Manager:
     def to_wei(self, value):
         return Web3.toWei(value, "ether")
 
+    def to_ether(self, value):
+        return round(value / 10**18, 5)
+
     def get_gas_used(self, receipt):
         return receipt["gasUsed"]
 
@@ -58,3 +61,6 @@ class Web3Manager:
             time_increment = value
 
         self.provider.make_request("evm_increaseTime", [int(time_increment)])
+
+    def get_eth_balance(self, address):
+        return self.to_ether(self.w3.eth.get_balance(address))

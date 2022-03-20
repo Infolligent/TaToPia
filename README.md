@@ -128,6 +128,15 @@ $ npx hardhat test
 
 ```
 
+# Run Demo App
+```
+$ pip install -r requirements.txt
+$ npx hardhat node
+$ cd scripts/
+$ python demo_initialization.py
+$ streamlit run demo.py
+```
+
 # TODO
 - [ ] Referral System
 - [ ] Branch visualization
