@@ -5,7 +5,7 @@ import time
 
 TaToPia = json.load(open("../artifacts/contracts/TaToPia.sol/TaToPia.json"))
 TaToPiaFactory = json.load(open("../artifacts/contracts/TaToPiaFactory.sol/TaToPiaFactory.json"))
-Potato = json.load(open("../artifacts/contracts/ERC20.sol/Potato.json"))
+Potato = json.load(open("../artifacts/contracts/Potato.sol/Potato.json"))
 
 w3 = Web3Manager("http://127.0.0.1:8545")
 to_wei = w3.to_wei

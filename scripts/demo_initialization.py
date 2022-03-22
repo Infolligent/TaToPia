@@ -5,7 +5,7 @@ import yaml
 w3 = Web3Manager("http://127.0.0.1:8545")
 TaToPia = json.load(open("../artifacts/contracts/TaToPia.sol/TaToPia.json"))
 TaToPiaFactory = json.load(open("../artifacts/contracts/TaToPiaFactory.sol/TaToPiaFactory.json"))
-Potato = json.load(open("../artifacts/contracts/ERC20.sol/Potato.json"))
+Potato = json.load(open("../artifacts/contracts/Potato.sol/Potato.json"))
 
 potato = w3.deploy_contract(Potato)
 tatopia_factory = w3.deploy_contract(TaToPiaFactory, [potato.address])

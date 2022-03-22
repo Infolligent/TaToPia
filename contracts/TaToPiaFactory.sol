@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity ^0.8.4;
 
 import "./TaToPia.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -17,11 +17,11 @@ contract TaToPiaFactory {
 
     TaToPia[] public villages;
     address public potatoAddress;
-    uint256 potatoDecimal;
+    uint256 _potatoDecimal;
 
     uint256 public villageCounter = 0;
 
-    ERC20 private POTATO;
+    ERC20 private _token;
     uint256[] private REFERRAL_BONUS = [20, 20, 20, 10, 10, 10, 5, 5, 5, 5, 5, 5];
     uint256[] private BONUS_UNLOCK = [
         3000,
@@ -40,8 +40,8 @@ contract TaToPiaFactory {
 
     constructor(address _potato) {
         potatoAddress = _potato;
-        POTATO = ERC20(_potato);
-        potatoDecimal = POTATO.decimals();
+        _token = ERC20(_potato);
+        _potatoDecimal = _token.decimals();
     }
 
     function createVillage(string memory _villageName) external {
@@ -50,162 +50,160 @@ contract TaToPiaFactory {
         villageCounter += 1;
     }
 
-    function getVillages() public view returns (TaToPia[] memory) {
-        return villages;
-    }
-
     function createLand(
-        uint256 _villageNumber,
-        string memory _landName,
-        uint256 _startTime
+        uint256 villageNumber_,
+        string memory landName_,
+        uint256 startTime_
     ) external {
-        TaToPia _village = TaToPia(villages[_villageNumber]);
-        _village.createLand(_startTime, _landName);
+        TaToPia _village = TaToPia(villages[villageNumber_]);
+        _village.createLand(startTime_, landName_);
     }
 
     function invest(
-        address _upline,
-        uint256 _villageNumber,
+        address upline_,
+        uint256 villageNumber_,
         uint256 _landNumber,
-        uint256 _amount
+        uint256 amount_
     ) external {
-        TaToPia _village = TaToPia(villages[_villageNumber]);
+        TaToPia _village = TaToPia(villages[villageNumber_]);
 
-        uint256 _allowance = POTATO.allowance(msg.sender, address(this));
-        require(_allowance >= _amount, "Not enough token allowance");
+        uint256 _allowance = _token.allowance(msg.sender, address(this));
+        require(_allowance >= amount_, "Not enough token allowance");
 
-        POTATO.transferFrom(msg.sender, address(_village), _amount);
-        _village.invest(msg.sender, _landNumber, _amount);
+        _token.transferFrom(msg.sender, address(_village), amount_);
+        _village.invest(msg.sender, _landNumber, amount_);
 
-        addReferrer(msg.sender, _upline);
-        addBonus(msg.sender, _amount);
+        _addReferrer(msg.sender, upline_);
+        _addBonus(msg.sender, amount_);
     }
 
-    function proceedToNextPhase(uint256 _villageNumber, uint256 _landNumber) external {
-        TaToPia _village = TaToPia(villages[_villageNumber]);
+    function proceedToNextPhase(uint256 villageNumber_, uint256 _landNumber) external {
+        TaToPia _village = TaToPia(villages[villageNumber_]);
         _village.proceedToNextPhase(_landNumber);
     }
 
-    function reinvest(uint256 _villageNumber, uint256 _landNumber) external {
-        TaToPia _village = TaToPia(villages[_villageNumber]);
-        (uint256 _investedLand, uint256 _amount) = _village.reinvest(msg.sender, _landNumber);
-        addBonus(msg.sender, _amount);
+    function reinvest(uint256 villageNumber_, uint256 _landNumber) external {
+        TaToPia _village = TaToPia(villages[villageNumber_]);
+        (uint256 _investedLand, uint256 amount_) = _village.reinvest(msg.sender, _landNumber);
+        // TODO: add event on _investedLand and amount_
+        _addBonus(msg.sender, amount_);
     }
 
-    function optOut(uint256 _villageNumber, uint256 _landNumber) external {
-        TaToPia _village = TaToPia(villages[_villageNumber]);
+    function optOut(uint256 villageNumber_, uint256 _landNumber) external {
+        TaToPia _village = TaToPia(villages[villageNumber_]);
         _village.optOut(msg.sender, _landNumber);
     }
 
-    function optOutWithdraw(uint256 _villageNumber, uint256 _landNumber) external {
-        TaToPia _village = TaToPia(villages[_villageNumber]);
+    function optOutWithdraw(uint256 villageNumber_, uint256 _landNumber) external {
+        TaToPia _village = TaToPia(villages[villageNumber_]);
         _village.optOutWithdraw(msg.sender, _landNumber);
     }
 
-    function refundSeedFail(uint256 _villageNumber) external {
-        TaToPia _village = TaToPia(villages[_villageNumber]);
+    function refundSeedFail(uint256 villageNumber_) external {
+        TaToPia _village = TaToPia(villages[villageNumber_]);
         _village.refundSeedFail(msg.sender);
     }
 
-    function migrateSeedFail(uint256 _villageNumber) external {
-        TaToPia _village = TaToPia(villages[_villageNumber]);
+    function migrateSeedFail(uint256 villageNumber_) external {
+        TaToPia _village = TaToPia(villages[villageNumber_]);
         (, bool _seedingStatus) = _village.getSeedingStatus();
         require(!_seedingStatus, "Seeding is successful");
-        uint256 _amount = _village.getSeedFailRefundAmount(msg.sender);
-        require(_amount > 0, "Your migratable amount is 0");
+        uint256 amount_ = _village.getSeedFailRefundAmount(msg.sender);
+        require(amount_ > 0, "Your migratable amount is 0");
 
         // find new village and migrate
-        for (uint256 i = _villageNumber + 1; i <= villageCounter; i++) {
-            bool _isAvailable = villages[i].isAvailableToMigrate(_amount);
+        for (uint256 i = villageNumber_ + 1; i <= villageCounter; i++) {
+            bool _isAvailable = villages[i].isAvailableToMigrate(amount_);
             if (_isAvailable) {
                 TaToPia _migrateVillage = TaToPia(villages[i]);
-                _migrateVillage.migration(msg.sender, _amount);
+                _migrateVillage.migration(msg.sender, amount_);
             }
         }
     }
 
-    /*************************************
-        Referral system 
-    *************************************/
-    function isCircularReference(address upline, address downline) internal view returns (bool) {
-        return players[upline].upline == downline;
-    }
-
-    function addReferrer(address _player, address _upline) internal returns (bool) {
-        if (_upline == address(0)) {
-            //emit RegisteredRefererFailed(msg.sender, referrer, "Referrer cannot be 0x0 address");
-            //return false;
-        } else if (isCircularReference(_upline, _player)) {
-            //emit RegisteredRefererFailed(msg.sender, referrer, "Referee cannot be one of referrer uplines");
-            return false;
-        } else if (players[_player].upline != address(0)) {
-            //emit RegisteredRefererFailed(msg.sender, referrer, "Address have been registered upline");
-            return false;
-        }
-
-        Player storage userAccount = players[_player];
-        Player storage uplineAccount = players[_upline];
-
-        userAccount.upline = _upline;
-        uplineAccount.downlines.push(_player);
-
-        // emit RegisteredReferer(msg.sender, referrer);
-        return true;
-    }
-
-    function addBonus(address _player, uint256 _amount) internal {
-        address _downline = _player;
-        address _upline;
-
-        for (uint256 i = 0; i < 12; i++) {
-            _upline = players[_downline].upline;
-
-            // TODO break if default upline is reached
-            if (_upline == address(0)) {
-                break;
-            }
-
-            Player storage _uplineAccount = players[_upline];
-
-            // add bonus if unlocked
-            uint256 _bonusUnlock = BONUS_UNLOCK[i] * (10**potatoDecimal);
-            uint256 _directDownlineInv = _uplineAccount.directDownlinesInvestment;
-            if (_directDownlineInv <= _bonusUnlock) {
-                if (i == 0) {
-                    if (_directDownlineInv + _amount > _bonusUnlock) {
-                        uint256 _balanceBonus = _directDownlineInv + _amount - _bonusUnlock;
-                        _uplineAccount.withdrawableBonus += (_balanceBonus * REFERRAL_BONUS[i]) / 1000;
-                    }
-                    _uplineAccount.directDownlinesInvestment += _amount;
-                }
-            } else {
-                _uplineAccount.withdrawableBonus += (_amount * REFERRAL_BONUS[i]) / 1000;
-            }
-
-            _downline = _upline;
-        }
-    }
-
-    /*************************************
-        View Functions 
-    *************************************/
-    function getPlayerInvestments(address _player) external view returns (uint256[][] memory) {
-        // returns the invested amount of player at each land of each village
+    function getPlayerInvestments(address player_) external view returns (uint256[][] memory) {
+        // returns the invested amount of player_ at each land of each village
         uint256[][] memory _investments = new uint256[][](villageCounter);
         for (uint256 i = 0; i < villageCounter; i++) {
             TaToPia _village = TaToPia(villages[i]);
-            uint256[] memory _villageInvestment = _village.getInvestments(_player);
+            uint256[] memory _villageInvestment = _village.getInvestments(player_);
             _investments[i] = _villageInvestment;
         }
 
         return _investments;
     }
 
-    function getUpline(address _player) external view returns (address) {
-        return players[_player].upline;
+    function getUpline(address player_) external view returns (address) {
+        return players[player_].upline;
     }
 
-    function getWithdrawableBonus(address _player) external view returns (uint256) {
-        return players[_player].withdrawableBonus;
+    function getWithdrawableBonus(address player_) external view returns (uint256) {
+        return players[player_].withdrawableBonus;
+    }
+
+    function getVillages() public view returns (TaToPia[] memory) {
+        return villages;
+    }
+
+    /*************************************
+        Referral system 
+    *************************************/
+    function _addBonus(address player_, uint256 amount_) internal {
+        address _downline = player_;
+        address upline_;
+
+        for (uint256 i = 0; i < 12; i++) {
+            upline_ = players[_downline].upline;
+
+            // TODO break if default upline is reached
+            if (upline_ == address(0)) {
+                break;
+            }
+
+            Player storage _uplineAccount = players[upline_];
+
+            // add bonus if unlocked
+            uint256 _bonusUnlock = BONUS_UNLOCK[i] * (10**_potatoDecimal);
+            uint256 _directDownlineInv = _uplineAccount.directDownlinesInvestment;
+            if (_directDownlineInv <= _bonusUnlock) {
+                if (i == 0) {
+                    if (_directDownlineInv + amount_ > _bonusUnlock) {
+                        uint256 _balanceBonus = _directDownlineInv + amount_ - _bonusUnlock;
+                        _uplineAccount.withdrawableBonus += (_balanceBonus * REFERRAL_BONUS[i]) / 1000;
+                    }
+                    _uplineAccount.directDownlinesInvestment += amount_;
+                }
+            } else {
+                _uplineAccount.withdrawableBonus += (amount_ * REFERRAL_BONUS[i]) / 1000;
+            }
+
+            _downline = upline_;
+        }
+    }
+
+    function _addReferrer(address player_, address upline_) internal returns (bool) {
+        if (upline_ == address(0)) {
+            //emit RegisteredRefererFailed(msg.sender, referrer, "Referrer cannot be 0x0 address");
+            //return false;
+        } else if (_isCircularReference(upline_, player_)) {
+            //emit RegisteredRefererFailed(msg.sender, referrer, "Referee cannot be one of referrer uplines");
+            return false;
+        } else if (players[player_].upline != address(0)) {
+            //emit RegisteredRefererFailed(msg.sender, referrer, "Address have been registered upline");
+            return false;
+        }
+
+        Player storage userAccount = players[player_];
+        Player storage uplineAccount = players[upline_];
+
+        userAccount.upline = upline_;
+        uplineAccount.downlines.push(player_);
+
+        // emit RegisteredReferer(msg.sender, referrer);
+        return true;
+    }
+
+    function _isCircularReference(address upline_, address downline_) internal view returns (bool) {
+        return players[upline_].upline == downline_;
     }
 }

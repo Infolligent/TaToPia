@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity ^0.8.4;
 
 // docs: https://docs.google.com/document/d/1g6WP1H0lS1s48IJ-GeCGYRelvQ7BOt8EHeqVsHA0xHE/edit
 
@@ -39,7 +39,7 @@ contract TaToPia is Ownable {
         mapping(address => bool) playerExist;
         address[] playersList;
         mapping(address => uint256) playersIndex;
-        mapping(address => bool) isReinvestFromT_2; // keeps track if the user is reinvested FROM the T-2 land
+        mapping(address => bool) isReinvestFromT2; // keeps track if the user is reinvested FROM the T-2 land
         mapping(address => bool) isReinvest; // keeps track if user already reinvest TO new land
         mapping(address => bool) seedFailRefunded;
         mapping(address => bool) optedOut;
@@ -50,31 +50,31 @@ contract TaToPia is Ownable {
     uint256 public landCounter;
     mapping(uint256 => Land) public lands;
 
-    mapping(address => bool) globalPlayerExist;
-    mapping(address => Player) players;
+    mapping(address => bool) _globalPlayerExist;
+    mapping(address => Player) _players;
     Player[] public globalPlayersList;
 
-    uint256 maxInt = 2**256 - 1;
+    uint256 constant public MAX_INT = type(uint256).max;
 
-    uint256 private InitialSeedTarget = 10000 ether; // assume Potato token is 18 decimals
+    uint256 private _initialSeedTarget = 10000 ether; // assume Potato token is 18 decimals
 
-    IERC20 private POTATO;
-    uint256 public VILLAGE_NUMBER;
-    string public VILLAGE_NAME;
+    IERC20 private _token;
+    uint256 public _villageNumber;
+    string public _villageName;
 
     constructor(
-        address _potato,
-        string memory _villageName,
-        uint256 _villageNumber
+        address potato_,
+        string memory villageName_,
+        uint256 villageNumber_
     ) {
-        POTATO = IERC20(_potato);
-        VILLAGE_NAME = _villageName;
-        VILLAGE_NUMBER = _villageNumber;
+        _token = IERC20(potato_);
+        _villageName = villageName_;
+        _villageNumber = villageNumber_;
 
-        POTATO.approve(msg.sender, maxInt);
+        _token.approve(msg.sender, MAX_INT);
     }
 
-    function createLand(uint256 _startTime, string memory _name) public {
+    function createLand(uint256 startTime_, string memory name_) public {
         // Previous land must be fully seeded
         if (landCounter > 0) {
             require(lands[landCounter - 1].hit, "Previous land has not hit seeding target");
@@ -90,12 +90,12 @@ contract TaToPia is Ownable {
             uint256 _previousTarget = lands[landCounter - 1].target;
             _target = (_previousTarget / 100) * 130;
         } else {
-            _target = InitialSeedTarget;
+            _target = _initialSeedTarget;
         }
 
         // initialize a land, starts at seeding phase
         Land storage _land = lands[landCounter];
-        _land.name = _name;
+        _land.name = name_;
         _land.landNumber = landCounter;
 
         if ((landCounter + 1) % 4 == 0) {
@@ -103,8 +103,8 @@ contract TaToPia is Ownable {
         }
 
         if (landCounter == 0) {
-            _land.phaseStartTime = _startTime;
-            _land.seedStart = _startTime;
+            _land.phaseStartTime = startTime_;
+            _land.seedStart = startTime_;
         } else {
             _land.phaseStartTime = block.timestamp;
             _land.seedStart = block.timestamp;
@@ -112,8 +112,8 @@ contract TaToPia is Ownable {
 
         // TODO: 3 and 4 days may need to swap
         if (landCounter == 0) {
-            _land.phaseEndTime = _startTime + 2 weeks - 1 hours;
-            _land.seedEnd = _startTime + 2 weeks - 1 hours;
+            _land.phaseEndTime = startTime_ + 2 weeks - 1 hours;
+            _land.seedEnd = startTime_ + 2 weeks - 1 hours;
         } else if (landCounter % 2 == 0) {
             _land.phaseEndTime = lands[landCounter - 1].seedEnd + 3 days;
             _land.seedEnd = lands[landCounter - 1].seedEnd + 3 days;
@@ -127,8 +127,8 @@ contract TaToPia is Ownable {
         landCounter++;
     }
 
-    function proceedToNextPhase(uint256 _landNumber) public {
-        Land storage _land = lands[_landNumber];
+    function proceedToNextPhase(uint256 landNumber) public {
+        Land storage _land = lands[landNumber];
 
         require(_land.phase != Phases.Sales, "This land is completed");
         uint256 _endTime = _land.phaseEndTime;
@@ -159,7 +159,7 @@ contract TaToPia is Ownable {
             // time is set to indefinite
             require(block.timestamp >= _endTime, "Not the time yet");
             _land.phaseStartTime = _endTime;
-            _land.phaseEndTime = maxInt;
+            _land.phaseEndTime = MAX_INT;
         }
         _land.phase = Phases(uint256(_land.phase) + 1);
     }
@@ -175,7 +175,7 @@ contract TaToPia is Ownable {
         require(block.timestamp >= _land.phaseStartTime, "Land is not started yet");
 
         // TODO: default upline?
-        // require(globalPlayerExist[_upline] || _upline == address(0), "Upline does not exist");
+        // require(_globalPlayerExist[_upline] || _upline == address(0), "Upline does not exist");
 
         // 0.1% of target
         uint256 _pointOne = _land.target / 1000;
@@ -239,7 +239,7 @@ contract TaToPia is Ownable {
                 }
 
                 if (i == _landNumber + 2) {
-                    _newLand.isReinvestFromT_2[_player] = true;
+                    _newLand.isReinvestFromT2[_player] = true;
                 }
                 return (i, _newInvestment);
             }
@@ -289,7 +289,7 @@ contract TaToPia is Ownable {
         // uint256 _index = _land.playersIndex[_player];
         // address _lastPlayer = _land.playersList[_land.playersList.length - 1];
         // _land.playersList[_index] = _lastPlayer;
-        // _land.playersIndex[_player] = maxInt;
+        // _land.playersIndex[_player] = MAX_INT;
         // _land.playersIndex[_lastPlayer] = _index;
         // _land.playerExist[_player] = false;
         // _land.playersList.pop();
@@ -307,11 +307,11 @@ contract TaToPia is Ownable {
 
         _land.optOutWithdraw[_player] = true;
 
-        POTATO.transfer(_player, _withdrawable);
+        _token.transfer(_player, _withdrawable);
     }
 
     function getContractPTTBalance() public view returns (uint256) {
-        return POTATO.balanceOf(address(this));
+        return _token.balanceOf(address(this));
     }
 
     /*************************************
@@ -376,7 +376,7 @@ contract TaToPia is Ownable {
             for (uint256 i = _landNumber - 1; i >= _landNumber - 3; i--) {
                 if (i == _landNumber - 3) {
                     // user reinvested from T-2 land, i.e. 2 to 4, so skip 2 to prevent duplicate refund
-                    if (lands[_landNumber].isReinvestFromT_2[_player]) {
+                    if (lands[_landNumber].isReinvestFromT2[_player]) {
                         break;
                     }
                 }
@@ -399,7 +399,7 @@ contract TaToPia is Ownable {
         uint256 _refundable = getSeedFailRefundAmount(_player);
         require(_refundable > 0, "Your refundable amount if 0");
         _land.seedFailRefunded[_player] = true;
-        POTATO.transfer(_player, _refundable);
+        _token.transfer(_player, _refundable);
     }
 
     /*************************************

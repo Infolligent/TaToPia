@@ -11,7 +11,7 @@ info = yaml.load(open('info.yaml'), Loader=yaml.FullLoader)
 
 TaToPia = json.load(open("../artifacts/contracts/TaToPia.sol/TaToPia.json"))
 TaToPiaFactory = json.load(open("../artifacts/contracts/TaToPiaFactory.sol/TaToPiaFactory.json"))
-Potato = json.load(open("../artifacts/contracts/ERC20.sol/Potato.json"))
+Potato = json.load(open("../artifacts/contracts/Potato.sol/Potato.json"))
 
 w3 = Web3Manager("http://127.0.0.1:8545")
 potato = w3.get_contract(address=info['potato_address'], abi=Potato['abi'])
@@ -85,8 +85,8 @@ with st.container():
     df = pd.DataFrame(columns=['Village Number', 'Name', 'PTT Balance', 'Total Lands', 'Seeding Status'])
     for village in villages:
         village_contract = w3.get_contract(address=village, abi=TaToPia['abi'])
-        number = village_contract.functions.VILLAGE_NUMBER().call()
-        name = village_contract.functions.VILLAGE_NAME().call()
+        number = village_contract.functions._villageNumber().call()
+        name = village_contract.functions._villageName().call()
         n_lands = village_contract.functions.landCounter().call()
         seeding_status = village_contract.functions.getSeedingStatus().call()
 
