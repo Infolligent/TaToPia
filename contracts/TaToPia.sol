@@ -322,6 +322,9 @@ contract TaToPia is Ownable {
         // Returns seeding status of latest land, returns:
         // 1. Latest land number
         // 2. Seeding status: True = seed successful, False = Seed fail
+        if (landCounter == 0) {
+            return (0, false);
+        }
         uint256 _landNumber = landCounter - 1;
         Land storage _land = lands[_landNumber];
 
