@@ -62,6 +62,12 @@ def migrate_seed_fail(village_number, address_index):
 
 villages = factory.functions.getVillages().call()
 
+st.subheader('Blockchain Time')
+latest_block_time = w3.get_block_timestamp()
+local_time = time.strftime('%Y-%m-%d %H%M', time.localtime(latest_block_time))
+st.text(f'Latest Block Timestamp: {latest_block_time}')
+st.text(f'Local time: {local_time}')
+
 with st.container():
     st.subheader('Address Stats')
     _address = st.selectbox('Choose address', [f'{idx} - {i}' for idx, i in enumerate(w3.accounts)])
