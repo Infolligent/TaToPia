@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const { waffle, ethers, network } = require("hardhat");
 
-const Potato = require("../artifacts/contracts/ERC20.sol/Potato.json");
+const Potato = require("../artifacts/contracts/Potato.sol/Potato.json");
 const TaToPiaFactory = require("../artifacts/contracts/TaToPiaFactory.sol/TaToPiaFactory.json");
 const Tatopia = require("../artifacts/contracts/TaToPia.sol/TaToPia.json");
 
@@ -42,7 +42,7 @@ describe("TaToPia", function() {
         expect(villages.length).to.equal(1);
 
         const village = new ethers.Contract(villages[0], Tatopia.abi, waffle.provider);
-        expect(await village.VILLAGE_NUMBER()).to.equal(0);
+        expect(await village._villageNumber()).to.equal(0);
     })
 
     it("Create land", async () => {

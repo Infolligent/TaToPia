@@ -11,7 +11,7 @@ info = yaml.load(open('info.yaml'), Loader=yaml.FullLoader)
 
 TaToPia = json.load(open("../artifacts/contracts/TaToPia.sol/TaToPia.json"))
 TaToPiaFactory = json.load(open("../artifacts/contracts/TaToPiaFactory.sol/TaToPiaFactory.json"))
-Potato = json.load(open("../artifacts/contracts/ERC20.sol/Potato.json"))
+Potato = json.load(open("../artifacts/contracts/Potato.sol/Potato.json"))
 
 w3 = Web3Manager("http://127.0.0.1:8545")
 potato = w3.get_contract(address=info['potato_address'], abi=Potato['abi'])
@@ -62,6 +62,12 @@ def migrate_seed_fail(village_number, address_index):
 
 villages = factory.functions.getVillages().call()
 
+st.subheader('Blockchain Time')
+latest_block_time = w3.get_block_timestamp()
+local_time = time.strftime('%Y-%m-%d %H%M', time.localtime(latest_block_time))
+st.text(f'Latest Block Timestamp: {latest_block_time}')
+st.text(f'Local time: {local_time}')
+
 with st.container():
     st.subheader('Address Stats')
     _address = st.selectbox('Choose address', [f'{idx} - {i}' for idx, i in enumerate(w3.accounts)])
@@ -85,8 +91,8 @@ with st.container():
     df = pd.DataFrame(columns=['Village Number', 'Name', 'PTT Balance', 'Total Lands', 'Seeding Status'])
     for village in villages:
         village_contract = w3.get_contract(address=village, abi=TaToPia['abi'])
-        number = village_contract.functions.VILLAGE_NUMBER().call()
-        name = village_contract.functions.VILLAGE_NAME().call()
+        number = village_contract.functions._villageNumber().call()
+        name = village_contract.functions._villageName().call()
         n_lands = village_contract.functions.landCounter().call()
         seeding_status = village_contract.functions.getSeedingStatus().call()
 
