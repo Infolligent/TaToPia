@@ -40,6 +40,7 @@ def token_allowance(amount, address_index):
 
 def fast_forward(hour, day, week):
     w3.increase_time(hour=hour, day=day, week=week)
+    w3.transact(potato.functions.approve(factory.address, 1), 0)
 
 def reinvest(village_number, land_number, address_index):
     w3.transact(factory.functions.reinvest(village_number, land_number), address_index)
