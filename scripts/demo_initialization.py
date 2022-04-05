@@ -12,7 +12,8 @@ tatopia_factory = w3.deploy_contract(TaToPiaFactory, [potato.address])
 
 # send potato to users
 for i in range(1, 50):
-    w3.transact(potato.functions.transfer(w3.accounts[i], w3.to_wei(5000)), 0)
+    w3.transact(potato.functions.transfer(w3.accounts[i], w3.to_wei(500000)), 0)
+    w3.transact(potato.functions.approve(tatopia_factory.address, w3.to_wei(500000)), i)
 
 info = {
     'potato_address': potato.address,
