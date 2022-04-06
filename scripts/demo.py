@@ -117,7 +117,7 @@ with st.container():
         n_lands = village_contract.functions.landCounter().call()
         df = pd.DataFrame(columns=['Land Name', 'Land Number', 'Seed Start Local', 'Seed End Local', 'Funded', 'Target', 'Min Invest', 'Max Invest', 'Phase'])
         for n in range(n_lands):
-            land_name, land_number, seed_start, seed_end, phase_start, phase_end, target, funded, reinvest, migrated, hit, phase = village_contract.functions.lands(n).call()
+            land_name, land_number, seed_start, seed_end, phase_start, phase_end, target, funded, reinvested, migrated, hit, phase = village_contract.functions.lands(n).call()
             series = pd.DataFrame({
                 'Land Name': land_name,
                 'Land Number': land_number,
