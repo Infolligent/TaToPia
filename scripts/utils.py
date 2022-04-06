@@ -54,9 +54,9 @@ class Web3Manager:
     def get_block_timestamp(self):
         return self.w3.eth.get_block("latest")["timestamp"]
 
-    def increase_time(self, value=0, hour=0, day=0, week=0):
+    def increase_time(self, value=0, min=0, hour=0, day=0, week=0):
         if value == 0:
-            time_increment = hour * 3600 + day * 86400 + week * 604800
+            time_increment = (min * 60) + (hour * 3600) + (day * 86400) + (week * 604800)
         else:
             time_increment = value
 
