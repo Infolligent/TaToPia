@@ -123,7 +123,7 @@ with st.container():
                 'Land Number': land_number,
                 'Seed Start Local': time.strftime('%Y-%m-%d %H%M', time.localtime(seed_start)),
                 'Seed End Local': time.strftime('%Y-%m-%d %H%M', time.localtime(seed_end)),
-                'Phase End Local': time.strftime('%Y-%m-%d %H%M', time.localtime(phase_end)),
+                'Phase End Local': (time.strftime('%Y-%m-%d %H%M', time.localtime(phase_end))) if phase_end else 0,
                 'Target': target * (10 ** -potato.functions.decimals().call()),
                 'Funded': funded * (10 ** -potato.functions.decimals().call()),
                 'Min Invest': ((target * 0.001) if ((target * 0.001) > 1000) else target * 0.001) * (10 ** -potato.functions.decimals().call()),
