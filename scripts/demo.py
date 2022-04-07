@@ -38,8 +38,8 @@ def invest(upline, new_village_number, new_land_number, amount, address_index):
 def token_allowance(amount, address_index):
     w3.transact(potato.functions.approve(factory.address, amount), address_index)
 
-def fast_forward(hour, day, week):
-    w3.increase_time(hour=hour, day=day, week=week)
+def fast_forward(min, hour, day, week):
+    w3.increase_time(min=min, hour=hour, day=day, week=week)
     w3.transact(potato.functions.approve(factory.address, 1), 0)
 
 def reinvest(village_number, land_number, address_index):
@@ -117,12 +117,13 @@ with st.container():
         n_lands = village_contract.functions.landCounter().call()
         df = pd.DataFrame(columns=['Land Name', 'Land Number', 'Seed Start Local', 'Seed End Local', 'Funded', 'Target', 'Min Invest', 'Max Invest', 'Phase'])
         for n in range(n_lands):
-            land_name, land_number, seed_start, seed_end, phase_start, phase_end, target, funded, reinvest, migrated, hit, phase = village_contract.functions.lands(n).call()
+            land_name, land_number, seed_start, seed_end, phase_start, phase_end, target, funded, reinvested, migrated, hit, phase = village_contract.functions.lands(n).call()
             series = pd.DataFrame({
                 'Land Name': land_name,
                 'Land Number': land_number,
                 'Seed Start Local': time.strftime('%Y-%m-%d %H%M', time.localtime(seed_start)),
                 'Seed End Local': time.strftime('%Y-%m-%d %H%M', time.localtime(seed_end)),
+                'Phase End Local': time.strftime('%Y-%m-%d %H%M', time.localtime(phase_end)),
                 'Target': target * (10 ** -potato.functions.decimals().call()),
                 'Funded': funded * (10 ** -potato.functions.decimals().call()),
                 'Min Invest': ((target * 0.001) if ((target * 0.001) > 1000) else target * 0.001) * (10 ** -potato.functions.decimals().call()),
@@ -190,7 +191,8 @@ with st.container():
         week = st.number_input('Week', value=0)
         day = st.number_input('Day', value=0)
         hour = st.number_input('Hour', value=0)
-        st.button('Fast Forward', on_click=fast_forward, args=[hour, day, week])
+        min = st.number_input('Minute', value=0)
+        st.button('Fast Forward', on_click=fast_forward, args=[min, hour, day, week])
 
     with cols[1]:
         st.info('Reinvest')
