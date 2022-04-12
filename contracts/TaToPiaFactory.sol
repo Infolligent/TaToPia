@@ -2,9 +2,10 @@
 pragma solidity ^0.8.4;
 
 import "./TaToPia.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract TaToPiaFactory {
+contract TaToPiaFactory is Ownable {
     struct Player {
         address upline;
         address[] downlines;
@@ -44,7 +45,10 @@ contract TaToPiaFactory {
         _potatoDecimal = _token.decimals();
     }
 
-    function createVillage(string memory _villageName) external {
+    function createVillage(string memory _villageName) external onlyOwner {
+        // TODO: enforce 4 lands?
+        TaToPia latestVillage = villages[villageCounter];
+        require(latestVillage.getLandCounter() > 4, 'Previous village has less than 4 lands');
         TaToPia _village = new TaToPia(potatoAddress, _villageName, villageCounter);
         villages.push(_village);
         villageCounter += 1;
@@ -54,7 +58,7 @@ contract TaToPiaFactory {
         uint256 villageNumber_,
         string memory landName_,
         uint256 startTime_
-    ) external {
+    ) external onlyOwner {
         TaToPia _village = TaToPia(villages[villageNumber_]);
         _village.createLand(startTime_, landName_);
     }
@@ -65,19 +69,26 @@ contract TaToPiaFactory {
         uint256 _landNumber,
         uint256 amount_
     ) external {
+        // TODO: require invesment in all previous existing villages
         TaToPia _village = TaToPia(villages[villageNumber_]);
 
         uint256 _allowance = _token.allowance(msg.sender, address(this));
         require(_allowance >= amount_, "Not enough token allowance");
 
         _token.transferFrom(msg.sender, address(_village), amount_);
-        _village.invest(msg.sender, _landNumber, amount_);
+        uint256 amount = _village.invest(msg.sender, _landNumber, amount_);
+        
+        // Overpaid
+        if (amount < amount_) {
+            uint256 refundableAmount = amount_ - amount;
+            _token.transferFrom(msg.sender, address(_village), refundableAmount);
+        }
 
         _addReferrer(msg.sender, upline_);
         _addBonus(msg.sender, amount_);
     }
 
-    function proceedToNextPhase(uint256 villageNumber_, uint256 _landNumber) external {
+    function proceedToNextPhase(uint256 villageNumber_, uint256 _landNumber) external onlyOwner {
         TaToPia _village = TaToPia(villages[villageNumber_]);
         _village.proceedToNextPhase(_landNumber);
     }
@@ -131,6 +142,21 @@ contract TaToPiaFactory {
         }
 
         return _investments;
+    }
+
+    function getPlayerReinvested(uint256 villageNumber_, uint256 landNumber_, address player_) external view returns (bool) {
+        TaToPia _village = TaToPia(villages[villageNumber_]);
+        return _village.getPlayerReinvested(landNumber_, player_);
+    }
+
+    function getPlayerOptedOut(uint256 villageNumber_, uint256 landNumber_, address player_) external view returns (bool) {
+        TaToPia _village = TaToPia(villages[villageNumber_]);
+        return _village.getPlayerOptedOut(landNumber_, player_);
+    }
+
+    function getPlayerWithdrawn(uint256 villageNumber_, uint256 landNumber_, address player_) external view returns (bool) {
+        TaToPia _village = TaToPia(villages[villageNumber_]);
+        return _village.getPlayerWithdrawn(landNumber_, player_);
     }
 
     function getUpline(address player_) external view returns (address) {
