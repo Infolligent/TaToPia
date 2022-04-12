@@ -23,7 +23,8 @@ phases = {
     2: 'Budding',
     3: 'Flowering',
     4: 'Harvest',
-    5: 'Sales'
+    5: 'Sales',
+    6: 'Failed'
 }
 
 def create_village(new_village_name, address_index):
@@ -138,7 +139,11 @@ with st.container():
         for idx, i in enumerate(investments[village_index]):
             series = pd.DataFrame({
                 'Land': idx,
-                'Investment': i * (10 ** -potato.functions.decimals().call())
+                'Investment': i * (10 ** -potato.functions.decimals().call()),
+                'Profit': i * 1.15 * (10 ** -potato.functions.decimals().call()),
+                'Reinvested': factory.functions.getPlayerReinvested(village_index, idx, address).call(),
+                'Opt Out': factory.functions.getPlayerOptedOut(village_index, idx, address).call(),
+                'Out Out Withdrawn': factory.functions.getPlayerWithdrawn(village_index, idx, address).call(),
             }, index=['-'])
             df = pd.concat([df, series], ignore_index=True)
         st.dataframe(df)

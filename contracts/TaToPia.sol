@@ -13,7 +13,8 @@ contract TaToPia is Ownable {
         Budding,
         Flowering,
         Harvest,
-        Sales
+        Sales,
+        Failed
     }
 
     struct Player {
@@ -133,10 +134,14 @@ contract TaToPia is Ownable {
         require(_land.phase != Phases.Sales, "This land is completed");
         uint256 _endTime = _land.phaseEndTime;
 
-        // TODO: put the correct time
         if (_land.phase == Phases.Seeding) {
             // proceed to Calculate phase after seeding
             require(block.timestamp >= _endTime, "Not the time yet");
+            if (_land.funded < _land.target) {
+                _land.phaseEndTime = MAX_INT;
+                _land.phase = Phases.Failed;
+                return;
+            }
             _land.phaseStartTime = _endTime;
             _land.phaseEndTime = _land.phaseStartTime + 1 hours;
         } else if (_land.phase == Phases.Calculate) {
@@ -168,7 +173,7 @@ contract TaToPia is Ownable {
         address _player,
         uint256 _landNumber,
         uint256 _amount
-    ) external onlyOwner {
+    ) external onlyOwner returns (uint256) {
         Land storage _land = lands[_landNumber];
         require(_landNumber < landCounter, "Not a valid land number");
         require(_land.phase == Phases.Seeding, "This land is not currently in seeding phase");
@@ -206,6 +211,7 @@ contract TaToPia is Ownable {
         if (_land.funded == _land.target) {
             _land.hit = true;
         }
+        return _amount;
     }
 
     // reinvest
@@ -213,7 +219,7 @@ contract TaToPia is Ownable {
         // _landNumber is the CURRENT land number
         // reinvestment will be bring forward to the new land
         Land storage _land = lands[_landNumber];
-        require(_land.phase == Phases.Flowering, "It is not the flowering phase");
+        require(_land.phase >= Phases.Flowering, "It is not the flowering phase");
         require(_land.playerExist[_player], "You are not in this land");
         require(!_land.optedOut[_player], "You have already opt out");
         require(!_land.isReinvest[_player], "You already reinvested");
@@ -317,7 +323,6 @@ contract TaToPia is Ownable {
     /*************************************
         Handle seed fail
     *************************************/
-
     function getSeedingStatus() public view returns (uint256, bool) {
         // Returns seeding status of latest land, returns:
         // 1. Latest land number
@@ -408,6 +413,10 @@ contract TaToPia is Ownable {
     /*************************************
         View Functions 
     *************************************/
+    function getLandCounter() external view returns (uint256) {
+        return landCounter;
+    }
+
     function getInvestments(address _player) external view returns (uint256[] memory) {
         uint256[] memory _investments = new uint256[](landCounter);
         for (uint256 i = 0; i < landCounter; i++) {
@@ -415,5 +424,20 @@ contract TaToPia is Ownable {
         }
 
         return _investments;
+    }
+
+    function getPlayerReinvested(uint256 _landNumber, address _player) external view returns (bool) {
+        Land storage _land = lands[_landNumber];
+        return _land.isReinvest[_player];
+    }
+
+    function getPlayerOptedOut(uint256 _landNumber, address _player) external view returns (bool) {
+        Land storage _land = lands[_landNumber];
+        return _land.optedOut[_player];
+    }
+
+    function getPlayerWithdrawn(uint256 _landNumber, address _player) external view returns (bool) {
+        Land storage _land = lands[_landNumber];
+        return _land.optOutWithdraw[_player];
     }
 }
