@@ -46,9 +46,10 @@ contract TaToPiaFactory is Ownable {
     }
 
     function createVillage(string memory _villageName) external onlyOwner {
-        // TODO: enforce 4 lands?
-        TaToPia latestVillage = villages[villageCounter];
-        require(latestVillage.getLandCounter() > 4, 'Previous village has less than 4 lands');
+        if (villageCounter > 0) {
+            TaToPia latestVillage = villages[villageCounter];
+            require(latestVillage.getLandCounter() > 4, 'Previous village has less than 4 lands');
+        }
         TaToPia _village = new TaToPia(potatoAddress, _villageName, villageCounter);
         villages.push(_village);
         villageCounter += 1;
